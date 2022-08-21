@@ -175,6 +175,8 @@ while True:
             products_t, parts_t = PLM_BOM_transpose.load_files(files)
             products += products_t
             parts += parts_t
+            products = list(set(products))
+            parts = list(set(parts))
         except:
             sg.Popup('Wrong file', keep_on_top=True)
 
