@@ -2,8 +2,36 @@ import PySimpleGUI as sg
 import PLM_BOM_transpose
 
 
+def PopupQuickView(subassembly):
+    if not any(subassembly[0] in i for i in products):
+        sg.Popup("No such subassembly loaded")
+        return None
+
+    subassembly_parts = sorted([i[1:] for i in parts if subassembly[0] in i[0]])
+
+    window_q = sg.Window("QuickView",
+                       [[sg.Table(values=[[]], headings=headings, max_col_width=700,
+                                  auto_size_columns=True,
+                                  display_row_numbers=False,
+                                  cols_justification=['l', 'c', 'l'],
+                                  def_col_width=50,
+                                  right_click_selects=True,
+                                  num_rows=20,
+                                  key='-TABLE_QUICKVIEW-',
+                                  selected_row_colors='red on yellow',
+                                  enable_events=False,
+                                  expand_x=True,
+                                  expand_y=True,
+                                  #enable_click_events=True,  # Comment out to not enable header and other clicks
+                                  tooltip='This is BOM for QuickView')],], finalize=True, font=('Helvetica', 16),
+                                  resizable=True, size=(600, 200))
+    window_q['-TABLE_QUICKVIEW-'].update(subassembly_parts)
+    event_q, values_q = window_q.read()
+    return None
+
+
 def compare(source):
-    parts_right, parts_left = [],[]
+    parts_right, parts_left = [], []
 
     if len(values['-IN_RIGHT-']) > 0:
         if source == "input":
@@ -55,71 +83,75 @@ def compare(source):
 headings = ["Part", "Qty", "Description"]
 
 col1 = sg.Column([[sg.Table(values=[[]], headings=headings, max_col_width=700,
-                    auto_size_columns=True,
-                    display_row_numbers=False,
-                    #justification='center',
-                    cols_justification=['l', 'c', 'l'],
-                    def_col_width=50,
-                    right_click_selects=True,
-                    num_rows=20,
-                    key='-TABLE_LEFT-',
-                    selected_row_colors='red on yellow',
-                    enable_events=True,
-                    expand_x=True,
-                    expand_y=True,
-                    enable_click_events=True,           # Comment out to not enable header and other clicks
-                    tooltip='This is BOM1')]], pad=(0, 0), expand_x=True)
+                            auto_size_columns=True,
+                            display_row_numbers=False,
+                            # justification='center',
+                            cols_justification=['l', 'c', 'l'],
+                            def_col_width=50,
+                            right_click_selects=True,
+                            num_rows=20,
+                            key='-TABLE_LEFT-',
+                            selected_row_colors='red on yellow',
+                            enable_events=True,
+                            expand_x=True,
+                            expand_y=True,
+                            enable_click_events=True,  # Comment out to not enable header and other clicks
+                            tooltip='This is BOM1',
+                            right_click_menu=['', ['Quick view', 'Expand for this', 'Expand for all']])]],
+                            pad=(0, 0), expand_x=True)
 
 col2 = sg.Column([[sg.Table(values=[[]], headings=headings, max_col_width=50,
-                    auto_size_columns=True,
-                    display_row_numbers=False,
-                    #justification='right',
-                    cols_justification=['l', 'c', 'l'],
-                    right_click_selects=True,
-                    num_rows=20,
-                    key='-TABLE_RIGHT-',
-                    selected_row_colors='red on yellow',
-                    enable_events=True,
-                    expand_x=True,
-                    expand_y=True,
-                    enable_click_events=False,           # Comment out to not enable header and other clicks
-                    tooltip='This is BOM2')]], pad=(0, 0), expand_x=True)
-
+                            auto_size_columns=True,
+                            display_row_numbers=False,
+                            # justification='right',
+                            cols_justification=['l', 'c', 'l'],
+                            right_click_selects=True,
+                            num_rows=20,
+                            key='-TABLE_RIGHT-',
+                            selected_row_colors='red on yellow',
+                            enable_events=True,
+                            expand_x=True,
+                            expand_y=True,
+                            enable_click_events=True,  # Comment out to not enable header and other clicks
+                            tooltip='This is BOM2',
+                            right_click_menu=['', ['Quick view', 'Expand for this', 'Expand for all']])]],
+                            pad=(0, 0), expand_x=True)
 
 col3 = sg.Column([[sg.Frame('Actions:',
-                            [[sg.Column([[sg.Button('Load Data', key= '-FILES-'), sg.Button('Clear All', key= '-CLEAR_FILES-'),  sg.Button('Clear Tables'), ]
+                            [[sg.Column([[sg.Button('Load Data', key='-FILES-'),
+                                          sg.Button('Clear All', key='-CLEAR_FILES-'), sg.Button('Clear Tables'), ]
                                          ],
-                                         pad=(0, 0))]]  )]], pad=(0, 0))
-
-products, parts = [], []
-
+                                        pad=(0, 0))]])]], pad=(0, 0))
 
 col4 = sg.Column([
-        [sg.Text('Kod motoru:')],
-        [sg.Input(size=(20, 1), enable_events=True, key='-IN_LEFT-')],
-        [sg.pin(sg.Col([[sg.Listbox(values=[], size=(20, 4), enable_events=True, key='-BOX_LEFT-',
-                                    select_mode=sg.LISTBOX_SELECT_MODE_SINGLE, no_scrollbar=True)]],
-                       key='-BOX-CONTAINER_LEFT-', pad=(0, 0), visible=False))]])
+    [sg.Text('Kod motoru:')],
+    [sg.Input(size=(20, 1), enable_events=True, key='-IN_LEFT-')],
+    [sg.pin(sg.Col([[sg.Listbox(values=[], size=(20, 4), enable_events=True, key='-BOX_LEFT-',
+                                select_mode=sg.LISTBOX_SELECT_MODE_SINGLE, no_scrollbar=True)]],
+                   key='-BOX-CONTAINER_LEFT-', pad=(0, 0), visible=False))]])
 
 col5 = sg.Column([
-        [sg.Text('Kod motoru:')],
-        [sg.Input(size=(20, 1), enable_events=True, key='-IN_RIGHT-')],
-        [sg.pin(sg.Col([[sg.Listbox(values=[], size=(20, 4), enable_events=True, key='-BOX_RIGHT-',
-                                    select_mode=sg.LISTBOX_SELECT_MODE_SINGLE, no_scrollbar=True)]],
-                       key='-BOX-CONTAINER_RIGHT-', pad=(0, 0), visible=False))]])
-
+    [sg.Text('Kod motoru:')],
+    [sg.Input(size=(20, 1), enable_events=True, key='-IN_RIGHT-')],
+    [sg.pin(sg.Col([[sg.Listbox(values=[], size=(20, 4), enable_events=True, key='-BOX_RIGHT-',
+                                select_mode=sg.LISTBOX_SELECT_MODE_SINGLE, no_scrollbar=True)]],
+                   key='-BOX-CONTAINER_RIGHT-', pad=(0, 0), visible=False))]])
 
 layout = [[sg.Push(), col3, sg.Push()],
           [col4, sg.Push(), col5],
-          [col1,  col2]]
+          [col1, col2]]
 
-
-
-window = sg.Window('Columns and Frames', layout, return_keyboard_events=True, finalize=True, font= ('Helvetica', 16), resizable=True, size=(1200,800), right_click_menu=sg.MENU_RIGHT_CLICK_EDITME_VER_EXIT)
-list_element_left: sg.Listbox = window.Element('-BOX_LEFT-')  # store listbox element for easier access and to get to docstrings
-list_element_right: sg.Listbox = window.Element('-BOX_RIGHT-')  # store listbox element for easier access and to get to docstrings
+window = sg.Window('Columns and Frames', layout, return_keyboard_events=True, finalize=True, font=('Helvetica', 16),
+                   resizable=True, size=(1200, 800))
+list_element_left: sg.Listbox = window.Element(
+    '-BOX_LEFT-')  # store listbox element for easier access and to get to docstrings
+list_element_right: sg.Listbox = window.Element(
+    '-BOX_RIGHT-')  # store listbox element for easier access and to get to docstrings
 prediction_list_left, input_text_left, sel_item_left = [], "", 0
 prediction_list_right, input_text_right, sel_item_right = [], "", 0
+products, parts = [], []
+
+table_clicked_right, table_clicked_left = False, False
 
 while True:
     event, values = window.read()
@@ -129,12 +161,33 @@ while True:
 
     if event == '-FILES-':
         try:
-            files = sg.PopupGetFile('Select folder', no_window=True, multiple_files=True, file_types=(("Excel files", [".xls", ".xlsx"]),))
+            files = sg.PopupGetFile('Select folder', no_window=True, multiple_files=True,
+                                    file_types=(("Excel files", [".xls", ".xlsx"]),))
             products_t, parts_t = PLM_BOM_transpose.load_files(files)
             products += products_t
             parts += parts_t
         except:
             sg.Popup('Wrong file', keep_on_top=True)
+
+    if event == "Quick view":
+        if not table_clicked_right:
+            try:
+                PopupQuickView(window['-TABLE_LEFT-'].get()[table_clicked_left])
+            except:
+                continue
+        elif not table_clicked_left:
+            try:
+                PopupQuickView(window['-TABLE_RIGHT-'].get()[table_clicked_right])
+            except:
+                continue
+
+    if isinstance(event, tuple):
+        if event[0] == '-TABLE_LEFT-':
+            table_clicked_left = event[2][0]
+            table_clicked_right = False
+        elif event[0] == '-TABLE_RIGHT-':
+            table_clicked_right = event[2][0]
+            table_clicked_left = False
 
     # if event and len(values['-IN_LEFT-']) > 0:
     #     # picked_left = values['-IN_LEFT-'].replace("'", "").replace(",", "").replace("(", "").replace(")", "")
@@ -205,7 +258,6 @@ while True:
             window['-BOX-CONTAINER_LEFT-'].update(visible=False)
         compare("input")
 
-
     if event == '-IN_RIGHT-':
         text = values['-IN_RIGHT-']
         if text == input_text_right:
@@ -235,7 +287,6 @@ while True:
         # window['-TABLE_LEFT-'].update(parts_left)
 
         compare("box")
-
 
     if event == '-BOX_RIGHT-':
         window['-IN_RIGHT-'].update(value=values['-BOX_RIGHT-'])
