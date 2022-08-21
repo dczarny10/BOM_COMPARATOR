@@ -8,26 +8,34 @@ def PopupQuickView(subassembly):
         return None
 
     subassembly_parts = sorted([i[1:] for i in parts if subassembly[0] in i[0]])
-
     window_q = sg.Window("QuickView",
-                       [[sg.Table(values=[[]], headings=headings, max_col_width=700,
-                                  auto_size_columns=True,
-                                  display_row_numbers=False,
-                                  cols_justification=['l', 'c', 'l'],
-                                  def_col_width=50,
-                                  right_click_selects=True,
-                                  num_rows=20,
-                                  key='-TABLE_QUICKVIEW-',
-                                  selected_row_colors='red on yellow',
-                                  enable_events=False,
-                                  expand_x=True,
-                                  expand_y=True,
-                                  #enable_click_events=True,  # Comment out to not enable header and other clicks
-                                  tooltip='This is BOM for QuickView')],], finalize=True, font=('Helvetica', 16),
-                                  resizable=True, size=(600, 200))
-    window_q['-TABLE_QUICKVIEW-'].update(subassembly_parts)
-    event_q, values_q = window_q.read()
-    return None
+                         [[sg.Table(values=subassembly_parts, headings=headings, max_col_width=700,
+                                    auto_size_columns=True,
+                                    display_row_numbers=False,
+                                    cols_justification=['l', 'c', 'l'],
+                                    def_col_width=50,
+                                    right_click_selects=True,
+                                    num_rows=20,
+                                    key='-TABLE_QUICKVIEW-',
+                                    selected_row_colors='red on yellow',
+                                    enable_events=True,
+                                    expand_x=True,
+                                    expand_y=True,
+                                    enable_click_events=True,  # Comment out to not enable header and other clicks
+                                    tooltip=f'This is BOM for {subassembly[0]}',
+                                    right_click_menu=['', ['Quick view']])], ],
+                         finalize=True, font=('Helvetica', 16),
+                         resizable=True, size=(600, 200))
+    while True:
+        event_q, values_q = window_q.read()
+        print(event_q, values_q)
+        if event_q == sg.WIN_CLOSED:
+            break
+        if event_q == 'Quick view':
+            window_q.close()
+            if not PopupQuickView(window_q['-TABLE_QUICKVIEW-'].get()[values_q['-TABLE_QUICKVIEW-'][0]]):
+                PopupQuickView(subassembly)
+    return True
 
 
 def compare(source):
@@ -80,6 +88,7 @@ def compare(source):
         window['-TABLE_LEFT-'].update(row_colors=((0, ''),))
         window['-TABLE_RIGHT-'].update(row_colors=((0, ''),))
 
+
 headings = ["Part", "Qty", "Description"]
 
 col1 = sg.Column([[sg.Table(values=[[]], headings=headings, max_col_width=700,
@@ -98,7 +107,7 @@ col1 = sg.Column([[sg.Table(values=[[]], headings=headings, max_col_width=700,
                             enable_click_events=True,  # Comment out to not enable header and other clicks
                             tooltip='This is BOM1',
                             right_click_menu=['', ['Quick view', 'Expand for this', 'Expand for all']])]],
-                            pad=(0, 0), expand_x=True)
+                 pad=(0, 0), expand_x=True)
 
 col2 = sg.Column([[sg.Table(values=[[]], headings=headings, max_col_width=50,
                             auto_size_columns=True,
@@ -115,7 +124,7 @@ col2 = sg.Column([[sg.Table(values=[[]], headings=headings, max_col_width=50,
                             enable_click_events=True,  # Comment out to not enable header and other clicks
                             tooltip='This is BOM2',
                             right_click_menu=['', ['Quick view', 'Expand for this', 'Expand for all']])]],
-                            pad=(0, 0), expand_x=True)
+                 pad=(0, 0), expand_x=True)
 
 col3 = sg.Column([[sg.Frame('Actions:',
                             [[sg.Column([[sg.Button('Load Data', key='-FILES-'),
@@ -159,7 +168,7 @@ while True:
     if event == sg.WIN_CLOSED:
         break
 
-    if event == '-FILES-':
+    elif event == '-FILES-':
         try:
             files = sg.PopupGetFile('Select folder', no_window=True, multiple_files=True,
                                     file_types=(("Excel files", [".xls", ".xlsx"]),))
@@ -169,7 +178,7 @@ while True:
         except:
             sg.Popup('Wrong file', keep_on_top=True)
 
-    if event == "Quick view":
+    elif event == "Quick view":
         if not table_clicked_right:
             try:
                 PopupQuickView(window['-TABLE_LEFT-'].get()[table_clicked_left])
@@ -181,7 +190,7 @@ while True:
             except:
                 continue
 
-    if isinstance(event, tuple):
+    elif isinstance(event, tuple):
         if event[0] == '-TABLE_LEFT-':
             table_clicked_left = event[2][0]
             table_clicked_right = False
@@ -201,7 +210,7 @@ while True:
     #     # window['-TABLE_RIGHT-'].update(parts_right)
     #     compare("input")
 
-    if event == 'Clear Tables':
+    elif event == 'Clear Tables':
         window['-IN_LEFT-'].update('')
         window['-BOX-CONTAINER_LEFT-'].update(visible=False)
         window['-IN_RIGHT-'].update('')
@@ -209,7 +218,7 @@ while True:
         window['-TABLE_LEFT-'].update([])
         window['-TABLE_RIGHT-'].update([])
 
-    if event == '-CLEAR_FILES-':
+    elif event == '-CLEAR_FILES-':
         products, parts = [], []
         window['-IN_LEFT-'].update('')
         window['-BOX-CONTAINER_LEFT-'].update(visible=False)
@@ -230,7 +239,7 @@ while True:
     # elif event.startswith('Up') and len(prediction_list_left):
     #     sel_item_left = (sel_item_left + (len(prediction_list_left) - 1)) % len(prediction_list_left)
     #     list_element_left.update(set_to_index=sel_item_left, scroll_to_index=sel_item_left)
-    if event == '\r':
+    elif event == '\r':
         if len(values['-BOX_LEFT-']) > 0:
             window['-IN_LEFT-'].update(value=values['-BOX_LEFT-'])
             window['-BOX-CONTAINER_LEFT-'].update(visible=False)
@@ -238,7 +247,7 @@ while True:
             window['-IN_RIGHT-'].update(value=values['-BOX_RIGHT-'])
             window['-BOX-CONTAINER_RIGHT-'].update(visible=False)
 
-    if event == '-IN_LEFT-':
+    elif event == '-IN_LEFT-':
         text = values['-IN_LEFT-']
         if text == input_text_left:
             continue
@@ -258,7 +267,7 @@ while True:
             window['-BOX-CONTAINER_LEFT-'].update(visible=False)
         compare("input")
 
-    if event == '-IN_RIGHT-':
+    elif event == '-IN_RIGHT-':
         text = values['-IN_RIGHT-']
         if text == input_text_right:
             continue
@@ -279,7 +288,7 @@ while True:
 
         compare("input")
 
-    if event == '-BOX_LEFT-':
+    elif event == '-BOX_LEFT-':
         window['-IN_LEFT-'].update(value=values['-BOX_LEFT-'])
         window['-BOX-CONTAINER_LEFT-'].update(visible=False)
         # picked_left = values['-BOX_LEFT-'][0]
@@ -288,7 +297,7 @@ while True:
 
         compare("box")
 
-    if event == '-BOX_RIGHT-':
+    elif event == '-BOX_RIGHT-':
         window['-IN_RIGHT-'].update(value=values['-BOX_RIGHT-'])
         window['-BOX-CONTAINER_RIGHT-'].update(visible=False)
         # picked_right = values['-BOX_RIGHT-'][0]
