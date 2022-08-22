@@ -109,7 +109,24 @@ def expand(parts_to_expand, products_to_expand):
                     break
         subassembly_parts = sorted([i[1:] for i in sub_parts if parts_to_expand[0] in i[0]]) #create list with subassembly parts
         del parts[index] #delete original part
-        parts.extend([(products_to_expand, i[0], i[1], i[2]) for i in subassembly_parts]) #add subassembly parts to parts list
+        parts.extend([(products_to_expand, i[0]+"_M", i[1], i[2]) for i in subassembly_parts]) #add subassembly parts to parts list
+
+    else:
+        if parts_to_expand: #if extend only one part for all products
+            for k in products_to_expand: #iterate through all products
+                index = -1
+                for i, obj in enumerate(parts):  # enumerate through loaded parts
+                    if obj[0] == k:  # if picked product
+                        if obj[1] == parts_to_expand[0]:  # if same part
+                            index = i
+                            break
+                if index > -1:
+                    subassembly_parts = sorted([i[1:] for i in sub_parts if parts_to_expand[0] in i[0]])  # create list with subassembly parts
+                    del parts[index]  # delete original part
+                    parts.extend([(k, i[0] + "_M", i[1], i[2]) for i in subassembly_parts])  # add subassembly parts to parts list
+
+
+
     return True
 
 headings = ["Part", "Qty", "Description"] #heading for tables
@@ -243,6 +260,22 @@ while True:
         elif not table_clicked_left:
             try:
                 expand(window['-TABLE_RIGHT-'].get()[table_clicked_right], window['-IN_RIGHT-'].get())
+                compare("input")
+            except:
+                continue
+
+
+    elif event == "Expand for all":
+        if not table_clicked_right:
+            try:
+                expand(window['-TABLE_LEFT-'].get()[table_clicked_left], products)
+                compare("input")
+            except Exception as e:
+                print(e)
+                continue
+        elif not table_clicked_left:
+            try:
+                expand(window['-TABLE_RIGHT-'].get()[table_clicked_right], products)
                 compare("input")
             except:
                 continue
