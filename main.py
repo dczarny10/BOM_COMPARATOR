@@ -177,7 +177,8 @@ while True:
             parts += parts_t
             products = list(set(products))
             parts = list(set(parts))
-        except:
+        except Exception as e:
+            print(e)
             sg.Popup('Wrong file', keep_on_top=True)
 
     elif event == "Quick view":

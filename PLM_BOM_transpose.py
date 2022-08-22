@@ -15,14 +15,22 @@ def load_files(paths):
             wb.SaveAs(tempfile.gettempdir()+"BOM_COMPARATOR_TEMP.xlsx", FileFormat=51)
             wb.Close()
             excel.Application.Quit()
-            wb_SAP = openpyxl.load_workbook(file+"x")
+            wb_SAP = openpyxl.load_workbook(tempfile.gettempdir()+"BOM_COMPARATOR_TEMP.xlsx")
             ws_SAP = wb_SAP.active
             ws_SAP.delete_cols(1, 1)
-            ws_SAP.delete_rows(1, 1)
-            ws_SAP.delete_rows(2, 1)
+            ws_SAP.delete_rows(1, 3)
             ws_SAP.delete_cols(5, 10)
             for q in ws_SAP.iter_rows(values_only=True):
-                data_SAP.append(tuple(map(str, (str(q[0])+"_SAP", q[1], q[2], q[3]))))
+                index = -1
+                for i, obj in enumerate(data_SAP):
+                    if obj[0]== (str(q[0])+"_SAP"):
+                        if obj[1] == q[1]:
+                            index = i
+                            break
+                if index == -1:
+                    data_SAP.append(tuple(map(str, (str(q[0])+"_SAP", q[1], q[2], q[3]))))
+                else:
+                    data_SAP[index] = (data_SAP[index][0], data_SAP[index][1], str(int(data_SAP[index][2])+int(q[2])), data_SAP[index][3])
                 if not str(q[0])+"_SAP" in products_list:
                     products_list.append(str(q[0])+"_SAP")
             os.remove(tempfile.gettempdir()+"BOM_COMPARATOR_TEMP.xlsx")
@@ -37,7 +45,18 @@ def load_files(paths):
             for j in data_PLM:
                 if j[3+count] != "0":
                     r = re.findall(pattern, j[0])
-                    results_PLM.append((i, r[0][0], j[3 + count].split(".")[0], r[0][1]))
+                    index = -1
+                    for k, obj in enumerate(results_PLM):
+                        if obj[0] == i:
+                            if obj[1] == r[0][0]:
+                                index = k
+                                break
+                    if index == -1:
+                        results_PLM.append((i, r[0][0], j[3 + count].split(".")[0], r[0][1]))
+                    else:
+                        results_PLM[index] = (results_PLM[index][0], results_PLM[index][1], str(int(results_PLM[index][2]) + int(j[3 + count].split(".")[0])), results_PLM[index][3])
+
+
                     if not i in products_list:
                         products_list.append(i)
 
