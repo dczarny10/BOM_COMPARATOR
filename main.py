@@ -3,11 +3,12 @@ import PLM_BOM_transpose
 
 
 def PopupQuickView(subassembly):
-    if not any(subassembly[0] in i for i in products):
+    if not any(subassembly[0] in i for i in products): #check if subassembly is loaded. #any because products is list of tuples and need to iterate throught it
         sg.Popup("No such subassembly loaded")
         return None
 
-    subassembly_parts = sorted([i[1:] for i in parts if subassembly[0] in i[0]])
+    subassembly_parts = sorted([i[1:] for i in parts if subassembly[0] in i[0]]) #create list of parts that are in picked subassembly. #i[1:] because first position in parts is product number which is not needed here
+    #declaration for QuickView table
     window_q = sg.Window("QuickView",
                          [[sg.Table(values=subassembly_parts, headings=headings, max_col_width=700,
                                     auto_size_columns=True,
@@ -31,66 +32,74 @@ def PopupQuickView(subassembly):
         print(event_q, values_q)
         if event_q == sg.WIN_CLOSED:
             break
-        if event_q == 'Quick view':
-            window_q.close()
-            if not PopupQuickView(window_q['-TABLE_QUICKVIEW-'].get()[values_q['-TABLE_QUICKVIEW-'][0]]):
-                PopupQuickView(subassembly)
+        if event_q == 'Quick view': #event for creating QuickView in QuickView
+            window_q.close() #close primary window
+            if not PopupQuickView(window_q['-TABLE_QUICKVIEW-'].get()[values_q['-TABLE_QUICKVIEW-'][0]]): #return None if picked part doesnt have subassembly
+                PopupQuickView(subassembly) #create primary window if picked part doesnt have subassembly
     return True
 
 
 def compare(source):
     parts_right, parts_left = [], []
 
-    if len(values['-IN_RIGHT-']) > 0:
-        if source == "input":
-            picked_right = values['-IN_RIGHT-'].replace("'", "").replace(",", "").replace("(", "").replace(")", "")
+    if len(values['-IN_RIGHT-']) > 0: #check if input is not empty
+        if source == "input": #distinguish sources if writen by user or picked from BOX
+            picked_right = values['-IN_RIGHT-'].replace("'", "").replace(",", "").replace("(", "").replace(")", "") #removes ',() from input
         else:
             picked_right = values['-BOX_RIGHT-'][0]
-        parts_right = sorted([i[1:] for i in parts if i[0] == picked_right])
-        window['-TABLE_RIGHT-'].update(parts_right)
+        parts_right = sorted([i[1:] for i in parts if i[0] == picked_right]) #create list of parts that are in picked product
+        window['-TABLE_RIGHT-'].update(parts_right) #update Table
 
     else:
-        window['-TABLE_RIGHT-'].update([])
-        window.refresh()
+        window['-TABLE_RIGHT-'].update([]) #if user erased input set table to empty
 
-    if len(values['-IN_LEFT-']) > 0:
-        if source == "input":
-            picked_left = values['-IN_LEFT-'].replace("'", "").replace(",", "").replace("(", "").replace(")", "")
+    if len(values['-IN_LEFT-']) > 0: #check if input is not empty
+        if source == "input": #distinguish sources if writen by user or picked from BOX
+            picked_left = values['-IN_LEFT-'].replace("'", "").replace(",", "").replace("(", "").replace(")", "") #removes ',() from input
         else:
             picked_left = values['-BOX_LEFT-'][0]
-        parts_left = sorted([i[1:] for i in parts if i[0] == picked_left])
-        window['-TABLE_LEFT-'].update(parts_left)
+        parts_left = sorted([i[1:] for i in parts if i[0] == picked_left]) #create list of parts that are in picked product
+        window['-TABLE_LEFT-'].update(parts_left) #update Table
 
     else:
-        window['-TABLE_LEFT-'].update([])
+        window['-TABLE_LEFT-'].update([]) #if user erased input set table to empty
 
-    if len(window['-TABLE_RIGHT-'].get()) > 1 and len(window['-TABLE_LEFT-'].get()) > 1:
-        for count, part in enumerate(parts_left):
+    if len(window['-TABLE_RIGHT-'].get()) > 1 and len(window['-TABLE_LEFT-'].get()) > 1: #if both inputs are not empty
+        for count, part in enumerate(parts_left): #enumerate through parts from left table
             index = -1
-            for i, obj in enumerate(parts_right):
-                if obj[0] == part[0]:
-                    if obj[1] == part[1]:
+            for i, obj in enumerate(parts_right): #enumerate through parts from right table
+                if obj[0] == part[0]: #if part found in right table
+                    if obj[1] == part[1]: #if it have same quantity
                         index = i
+                        break
+                    index = -2
                     break
             if index == -1:
-                window['-TABLE_LEFT-'].update(row_colors=((count, 'red'),))
+                window['-TABLE_LEFT-'].update(row_colors=((count, 'red'),)) #if part if not found in right table set row color to red
+            elif index == -2:
+                window['-TABLE_LEFT-'].update(row_colors=((count, 'black', 'yellow'),)) #if part if found in right table but with different quantity set row color to yellow
 
-        for count, part in enumerate(parts_right):
+        for count, part in enumerate(parts_right): #enumerate through parts from right table
             index = -1
-            for i, obj in enumerate(parts_left):
-                if obj[0] == part[0]:
-                    if obj[1] == part[1]:
+            for i, obj in enumerate(parts_left): #enumerate through parts from right table
+                if obj[0] == part[0]: #if part found in left table
+                    if obj[1] == part[1]: #if it have same quantity
                         index = i
+                        break
+                    index = -2
                     break
             if index == -1:
-                window['-TABLE_RIGHT-'].update(row_colors=((count, 'red'),))
-    else:
+                window['-TABLE_RIGHT-'].update(row_colors=((count, 'red'),)) #if part if not found in right table set row color to red
+            elif index == -2:
+                window['-TABLE_RIGHT-'].update(row_colors=((count, 'black', 'yellow'),)) #if part if found in right table but with different quantity set row color to yellow
+    else: #ensure no rows are colored if both inputs are not picked
         window['-TABLE_LEFT-'].update(row_colors=((0, ''),))
         window['-TABLE_RIGHT-'].update(row_colors=((0, ''),))
 
 
-headings = ["Part", "Qty", "Description"]
+headings = ["Part", "Qty", "Description"] #heading for tables
 
+#column declaration with left table
 col1 = sg.Column([[sg.Table(values=[[]], headings=headings, max_col_width=700,
                             auto_size_columns=True,
                             display_row_numbers=False,
@@ -109,6 +118,7 @@ col1 = sg.Column([[sg.Table(values=[[]], headings=headings, max_col_width=700,
                             right_click_menu=['', ['Quick view', 'Expand for this', 'Expand for all']])]],
                  pad=(0, 0), expand_x=True)
 
+#column declaration with right table
 col2 = sg.Column([[sg.Table(values=[[]], headings=headings, max_col_width=50,
                             auto_size_columns=True,
                             display_row_numbers=False,
@@ -126,12 +136,12 @@ col2 = sg.Column([[sg.Table(values=[[]], headings=headings, max_col_width=50,
                             right_click_menu=['', ['Quick view', 'Expand for this', 'Expand for all']])]],
                  pad=(0, 0), expand_x=True)
 
+#column declaration with top buttons
 col3 = sg.Column([[sg.Frame('Actions:',
-                            [[sg.Column([[sg.Button('Load Data', key='-FILES-'),
-                                          sg.Button('Clear All', key='-CLEAR_FILES-'), sg.Button('Clear Tables'), ]
-                                         ],
-                                        pad=(0, 0))]])]], pad=(0, 0))
+                            [[sg.Column([[sg.Button('Load Data', key='-FILES-'), sg.Button('Clear All', key='-CLEAR_FILES-'), sg.Button('Clear Tables'), ]],
+                    pad=(0, 0))]])]], pad=(0, 0))
 
+#column declaration with left input
 col4 = sg.Column([
     [sg.Text('Kod motoru:')],
     [sg.Input(size=(20, 1), enable_events=True, key='-IN_LEFT-')],
@@ -139,6 +149,7 @@ col4 = sg.Column([
                                 select_mode=sg.LISTBOX_SELECT_MODE_SINGLE, no_scrollbar=True)]],
                    key='-BOX-CONTAINER_LEFT-', pad=(0, 0), visible=False))]])
 
+#column declaration with right input
 col5 = sg.Column([
     [sg.Text('Kod motoru:')],
     [sg.Input(size=(20, 1), enable_events=True, key='-IN_RIGHT-')],
@@ -201,18 +212,6 @@ while True:
             table_clicked_right = event[2][0]
             table_clicked_left = False
 
-    # if event and len(values['-IN_LEFT-']) > 0:
-    #     # picked_left = values['-IN_LEFT-'].replace("'", "").replace(",", "").replace("(", "").replace(")", "")
-    #     # parts_left = [i[1:] for i in parts if i[0] == picked_left]
-    #     # window['-TABLE_LEFT-'].update(parts_left)
-    #     compare("input")
-    #
-    # if event and len(values['-IN_RIGHT-']) > 0:
-    #     # picked_right = values['-IN_RIGHT-'].replace("'", "").replace(",", "").replace("(", "").replace(")", "")
-    #     # parts_right = [i[1:] for i in parts if i[0] == picked_right]
-    #     # window['-TABLE_RIGHT-'].update(parts_right)
-    #     compare("input")
-
     elif event == 'Clear Tables':
         window['-IN_LEFT-'].update('')
         window['-BOX-CONTAINER_LEFT-'].update(visible=False)
@@ -230,18 +229,7 @@ while True:
         window['-TABLE_LEFT-'].update([])
         window['-TABLE_RIGHT-'].update([])
 
-    # if event.startswith('Escape'):
-    #     window['-IN_LEFT-'].update('')
-    #     window['-BOX-CONTAINER_LEFT-'].update(visible=False)
-    #     window['-IN_RIGHT-'].update('')
-    #     window['-BOX-CONTAINER_RIGHT-'].update(visible=False)
-    #     print("teraz")
-    # elif event.startswith('Down') and len(prediction_list_left):
-    #     sel_item_left = (sel_item_left + 1) % len(prediction_list_left)
-    #     list_element_left.update(set_to_index=sel_item_left, scroll_to_index=sel_item_left)
-    # elif event.startswith('Up') and len(prediction_list_left):
-    #     sel_item_left = (sel_item_left + (len(prediction_list_left) - 1)) % len(prediction_list_left)
-    #     list_element_left.update(set_to_index=sel_item_left, scroll_to_index=sel_item_left)
+
     elif event == '\r':
         if len(values['-BOX_LEFT-']) > 0:
             window['-IN_LEFT-'].update(value=values['-BOX_LEFT-'])
@@ -294,18 +282,11 @@ while True:
     elif event == '-BOX_LEFT-':
         window['-IN_LEFT-'].update(value=values['-BOX_LEFT-'])
         window['-BOX-CONTAINER_LEFT-'].update(visible=False)
-        # picked_left = values['-BOX_LEFT-'][0]
-        # parts_left = [i[1:] for i in parts if i[0] == picked_left]
-        # window['-TABLE_LEFT-'].update(parts_left)
-
         compare("box")
 
     elif event == '-BOX_RIGHT-':
         window['-IN_RIGHT-'].update(value=values['-BOX_RIGHT-'])
         window['-BOX-CONTAINER_RIGHT-'].update(visible=False)
-        # picked_right = values['-BOX_RIGHT-'][0]
-        # parts_right = [i[1:] for i in parts if i[0] == picked_right]
-        # window['-TABLE_RIGHT-'].update(parts_right)
         compare("box")
 
 window.close()
