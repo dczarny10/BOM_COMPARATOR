@@ -1,7 +1,6 @@
 import PySimpleGUI as sg
 import PLM_BOM_transpose
 
-
 def PopupQuickView(subassembly):
     if not any(subassembly[0] in i for i in products): #check if subassembly is loaded. #any because products is list of tuples and need to iterate throught it
         sg.Popup("No such subassembly loaded")
