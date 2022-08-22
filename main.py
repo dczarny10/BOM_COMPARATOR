@@ -2,11 +2,11 @@ import PySimpleGUI as sg
 import PLM_BOM_transpose
 
 def PopupQuickView(subassembly):
-    if not any(subassembly[0] in i for i in products): #check if subassembly is loaded. #any because products is list of tuples and need to iterate throught it
+    if not any(subassembly[0] in i for i in sub_products): #check if subassembly is loaded. #any because products is list of tuples and need to iterate throught it
         sg.Popup("No such subassembly loaded")
         return None
 
-    subassembly_parts = sorted([i[1:] for i in parts if subassembly[0] in i[0]]) #create list of parts that are in picked subassembly. #i[1:] because first position in parts is product number which is not needed here
+    subassembly_parts = sorted([i[1:] for i in sub_parts if subassembly[0] in i[0]]) #create list of parts that are in picked subassembly. #i[1:] because first position in parts is product number which is not needed here
     #declaration for QuickView table
     window_q = sg.Window("QuickView",
                          [[sg.Table(values=subassembly_parts, headings=headings, max_col_width=700,
@@ -95,6 +95,22 @@ def compare(source):
         window['-TABLE_LEFT-'].update(row_colors=((0, ''),))
         window['-TABLE_RIGHT-'].update(row_colors=((0, ''),))
 
+def expand(parts_to_expand, products_to_expand):
+    if not any(parts_to_expand[0] in i for i in sub_products): #check if subassembly is loaded. #any because products is list of tuples and need to iterate throught it
+        sg.Popup("No such subassembly loaded")
+        return None
+    if type(products_to_expand) == str: #if extend only one part for one product
+        products_to_expand = products_to_expand.replace("'", "").replace(",", "").replace("(", "").replace(")", "")
+        index = -1
+        for i, obj in enumerate(parts):  #enumerate through loaded parts
+            if obj[0] == products_to_expand:  #if picked product
+                if obj[1] == parts_to_expand[0]:  #if same part
+                    index = i
+                    break
+        subassembly_parts = sorted([i[1:] for i in sub_parts if parts_to_expand[0] in i[0]]) #create list with subassembly parts
+        del parts[index] #delete original part
+        parts.extend([(products_to_expand, i[0], i[1], i[2]) for i in subassembly_parts]) #add subassembly parts to parts list
+    return True
 
 headings = ["Part", "Qty", "Description"] #heading for tables
 
@@ -137,7 +153,7 @@ col2 = sg.Column([[sg.Table(values=[[]], headings=headings, max_col_width=50,
 
 #column declaration with top buttons
 col3 = sg.Column([[sg.Frame('Actions:',
-                            [[sg.Column([[sg.Button('Load Data', key='-FILES-'), sg.Button('Clear All', key='-CLEAR_FILES-'), sg.Button('Clear Tables'), ]],
+                            [[sg.Column([[sg.Button('Load Data', key='-FILES-'), sg.Button('Clear All', key='-CLEAR_FILES-'), sg.Button('Clear Tables', key='-CLEAR_TABLES-'), sg.Button('Load Subassemblies', key='-LOAD_SUB-'), sg.Button('Expand all subassemblies', key='-EXPAND_SUB-') ]],
                     pad=(0, 0))]])]], pad=(0, 0))
 
 #column declaration with left input
@@ -168,7 +184,7 @@ list_element_right: sg.Listbox = window.Element(
     '-BOX_RIGHT-')  # store listbox element for easier access and to get to docstrings
 prediction_list_left, input_text_left, sel_item_left = [], "", 0
 prediction_list_right, input_text_right, sel_item_right = [], "", 0
-products, parts = [], []
+products, parts, sub_products, sub_parts = [], [], [], []
 
 table_clicked_right, table_clicked_left = False, False
 
@@ -191,6 +207,19 @@ while True:
             print(e)
             sg.Popup('Wrong file', keep_on_top=True)
 
+    elif event == '-LOAD_SUB-':
+        try:
+            files = sg.PopupGetFile('Select folder', no_window=True, multiple_files=True,
+                                    file_types=(("Excel files", [".xls", ".xlsx"]),))
+            sub_products_t, sub_parts_t = PLM_BOM_transpose.load_files(files)
+            sub_products += sub_products_t
+            sub_parts += sub_parts_t
+            sub_products = list(set(sub_products))
+            sub_parts = list(set(sub_parts))
+        except Exception as e:
+            print(e)
+            sg.Popup('Wrong file', keep_on_top=True)
+
     elif event == "Quick view":
         if not table_clicked_right:
             try:
@@ -203,6 +232,21 @@ while True:
             except:
                 continue
 
+    elif event == "Expand for this":
+        if not table_clicked_right:
+            try:
+                expand(window['-TABLE_LEFT-'].get()[table_clicked_left], window['-IN_LEFT-'].get())
+                compare("input")
+            except Exception as e:
+                print(e)
+                continue
+        elif not table_clicked_left:
+            try:
+                expand(window['-TABLE_RIGHT-'].get()[table_clicked_right], window['-IN_RIGHT-'].get())
+                compare("input")
+            except:
+                continue
+
     elif isinstance(event, tuple):
         if event[0] == '-TABLE_LEFT-':
             table_clicked_left = event[2][0]
@@ -211,7 +255,7 @@ while True:
             table_clicked_right = event[2][0]
             table_clicked_left = False
 
-    elif event == 'Clear Tables':
+    elif event == '-CLEAR_TABLES-':
         window['-IN_LEFT-'].update('')
         window['-BOX-CONTAINER_LEFT-'].update(visible=False)
         window['-IN_RIGHT-'].update('')
@@ -220,14 +264,13 @@ while True:
         window['-TABLE_RIGHT-'].update([])
 
     elif event == '-CLEAR_FILES-':
-        products, parts = [], []
+        products, parts, sub_products, sub_parts = [], [], [], []
         window['-IN_LEFT-'].update('')
         window['-BOX-CONTAINER_LEFT-'].update(visible=False)
         window['-IN_RIGHT-'].update('')
         window['-BOX-CONTAINER_RIGHT-'].update(visible=False)
         window['-TABLE_LEFT-'].update([])
         window['-TABLE_RIGHT-'].update([])
-
 
     elif event == '\r':
         if len(values['-BOX_LEFT-']) > 0:
