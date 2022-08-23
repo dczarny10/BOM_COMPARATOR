@@ -112,7 +112,7 @@ def expand(parts_to_expand, products_to_expand):
         parts.extend([(products_to_expand, i[0]+"_M", i[1], i[2]) for i in subassembly_parts]) #add subassembly parts to parts list
 
     else:
-        if parts_to_expand: #if extend only one part for all products
+        if len(parts_to_expand) == 1: #if extend only one part for all products
             for k in products_to_expand: #iterate through all products
                 index = -1
                 for i, obj in enumerate(parts):  # enumerate through loaded parts
@@ -125,8 +125,23 @@ def expand(parts_to_expand, products_to_expand):
                     del parts[index]  # delete original part
                     parts.extend([(k, i[0] + "_M", i[1], i[2]) for i in subassembly_parts])  # add subassembly parts to parts list
 
-
-
+        else:
+            for o in sub_products: #iterate through all subassembly products
+                if o.endswith("_SAP"): #strip subassembly product number of _SAP or plant and revision level
+                    o = o[:-4]
+                else:
+                    o = o[:-10]
+                for k in products_to_expand: #iterate through all products
+                    index = -1
+                    for i, obj in enumerate(parts):  #iterate through all loaded parts
+                        if obj[0] == k:  # if same product
+                            if obj[1] == o:  # if same part
+                                index = i
+                                break
+                    if index > -1: #if found same part in same product
+                        subassembly_parts = sorted([i[1:] for i in sub_parts if o in i[0]])  # create list with subassembly parts
+                        del parts[index]  # delete original part
+                        parts.extend([(k, i[0] + "_M", i[1], i[2]) for i in subassembly_parts])  # add subassembly parts to parts list
     return True
 
 headings = ["Part", "Qty", "Description"] #heading for tables
@@ -276,6 +291,21 @@ while True:
         elif not table_clicked_left:
             try:
                 expand(window['-TABLE_RIGHT-'].get()[table_clicked_right], products)
+                compare("input")
+            except:
+                continue
+
+    elif event == '-EXPAND_SUB-':
+        if not table_clicked_right:
+            try:
+                expand(sub_products, products)
+                compare("input")
+            except Exception as e:
+                print(e)
+                continue
+        elif not table_clicked_left:
+            try:
+                expand(sub_products, products)
                 compare("input")
             except:
                 continue
