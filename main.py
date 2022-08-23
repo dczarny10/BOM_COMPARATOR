@@ -126,16 +126,20 @@ def expand(parts_to_expand, products_to_expand):
                     parts.extend([(k, i[0] + "_M", i[1], i[2]) for i in subassembly_parts])  # add subassembly parts to parts list
 
         else:
-            for o in sub_products:
+            for o in sub_products: #iterate through all subassembly products
+                if o.endswith("_SAP"): #strip subassembly product number of _SAP or plant and revision level
+                    o = o[:-4]
+                else:
+                    o = o[:-10]
                 for k in products_to_expand: #iterate through all products
                     index = -1
-                    for i, obj in enumerate(parts):  # enumerate through loaded parts
-                        if obj[0] == k:  # if picked product
-                            if obj[1] == o[0]:  # if same part
+                    for i, obj in enumerate(parts):  #iterate through all loaded parts
+                        if obj[0] == k:  # if same product
+                            if obj[1] == o:  # if same part
                                 index = i
                                 break
-                    if index > -1:
-                        subassembly_parts = sorted([i[1:] for i in sub_parts if o[0] in i[0]])  # create list with subassembly parts
+                    if index > -1: #if found same part in same product
+                        subassembly_parts = sorted([i[1:] for i in sub_parts if o in i[0]])  # create list with subassembly parts
                         del parts[index]  # delete original part
                         parts.extend([(k, i[0] + "_M", i[1], i[2]) for i in subassembly_parts])  # add subassembly parts to parts list
     return True
