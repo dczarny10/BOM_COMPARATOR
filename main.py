@@ -145,11 +145,41 @@ def expand(parts_to_expand, products_to_expand):
                         parts.extend([(k, i[0] + "_M", i[1], i[2]) for i in subassembly_parts])  # add subassembly parts to parts list
     return True
 
+def mass_check():
+    if len(products) < 1:
+        sg.Popup("No parts loaded")
+        return False
+
+    window_m = sg.Window("PLM vs SAP mass check",
+                         [[sg.Text('Quickly check all differences between SAP and PLM')],
+                          [sg.Text('Make sure both data from SAP and PLM are loaded')],
+                          [sg.Checkbox('Expand all subassemblies:', default=False, key='-EXPAND-')],
+                          [sg.Button('OK')], ],
+                         finalize=True, font=('Helvetica', 16),
+                         resizable=True, size=(600, 200))
+    while True:
+        event_m, values_m = window_m.read()
+        print(event_m, values_m)
+        if event_m == sg.WIN_CLOSED:
+            break
+        if event_m == 'OK':
+            products_pairs = []
+            if values_m['-EXPAND-']:
+                expand(sub_products, products)
+            products_list = set([i[:-4] if i.endswith('_SAP') else i[:-10] for i in products])
+            for p in products_list:
+                products_pairs.append([i for i in products if i.startswith(p)])
+
+            for j in products_pairs:
+                continue
+
+    return True
+
 headings = ["Part", "Qty", "Description"] #heading for tables
 
 menu_def = [['&File', ['&Load data', '&Load subassemblies', '&Clear data', 'E&xit']],
                 ['&Edit', ['&Expand all subassemblies' ],],
-                ['&Tools', ['&Compare BOMs', '&BOM Mass check'],],
+                ['&Tools', ['&Compare BOMs', '&SAP/PLM Mass check'],],
                 ['&Help', '&About...'], ]
 
 menu_top = [['&Compare'],['&Mass check'], ]
@@ -288,7 +318,6 @@ while True:
             except:
                 continue
 
-
     elif event == "Expand for all":
         if not table_clicked_right:
             try:
@@ -305,19 +334,15 @@ while True:
                 continue
 
     elif event == 'Expand all subassemblies':
-        if not table_clicked_right:
-            try:
-                expand(sub_products, products)
-                compare("input")
-            except Exception as e:
-                print(e)
-                continue
-        elif not table_clicked_left:
-            try:
-                expand(sub_products, products)
-                compare("input")
-            except:
-                continue
+        try:
+            expand(sub_products, products)
+            compare("input")
+        except Exception as e:
+            print(e)
+            continue
+
+    elif event == 'SAP/PLM Mass check':
+        mass_check()
 
     elif isinstance(event, tuple): #event to recognize which row in which table was clicked by user. Needed for rightclickmenu
         if event[0] == '-TABLE_LEFT-':
