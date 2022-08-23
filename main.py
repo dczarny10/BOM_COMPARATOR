@@ -1,6 +1,8 @@
 import PySimpleGUI as sg
 import PLM_BOM_transpose
 
+sg.theme("DarkTeal12")
+
 def PopupQuickView(subassembly):
     if not any(subassembly[0] in i for i in sub_products): #check if subassembly is loaded. #any because products is list of tuples and need to iterate throught it
         sg.Popup("No such subassembly loaded")
@@ -36,7 +38,6 @@ def PopupQuickView(subassembly):
             if not PopupQuickView(window_q['-TABLE_QUICKVIEW-'].get()[values_q['-TABLE_QUICKVIEW-'][0]]): #return None if picked part doesnt have subassembly
                 PopupQuickView(subassembly) #create primary window if picked part doesnt have subassembly
     return True
-
 
 def compare(source):
     parts_right, parts_left = [], []
@@ -146,6 +147,12 @@ def expand(parts_to_expand, products_to_expand):
 
 headings = ["Part", "Qty", "Description"] #heading for tables
 
+menu_def = [['&File', ['&Load data', '&Load subassemblies', '&Clear data', 'E&xit']],
+                ['&Edit', ['&Expand all subassemblies' ],],
+                ['&Tools', ['&Compare BOMs', '&BOM Mass check'],],
+                ['&Help', '&About...'], ]
+
+menu_top = [['&Compare'],['&Mass check'], ]
 #column declaration with left table
 col1 = sg.Column([[sg.Table(values=[[]], headings=headings, max_col_width=700,
                             auto_size_columns=True,
@@ -185,12 +192,12 @@ col2 = sg.Column([[sg.Table(values=[[]], headings=headings, max_col_width=50,
 
 #column declaration with top buttons
 col3 = sg.Column([[sg.Frame('Actions:',
-                            [[sg.Column([[sg.Button('Load Data', key='-FILES-'), sg.Button('Clear All', key='-CLEAR_FILES-'), sg.Button('Clear Tables', key='-CLEAR_TABLES-'), sg.Button('Load Subassemblies', key='-LOAD_SUB-'), sg.Button('Expand all subassemblies', key='-EXPAND_SUB-') ]],
+                            [[sg.Column([[sg.Button('Clear Tables', key='-CLEAR_TABLES-')]],
                     pad=(0, 0))]])]], pad=(0, 0))
 
 #column declaration with left input
 col4 = sg.Column([
-    [sg.Text('Kod motoru:')],
+    [sg.Text('Product number:')],
     [sg.Input(size=(20, 1), enable_events=True, key='-IN_LEFT-')],
     [sg.pin(sg.Col([[sg.Listbox(values=[], size=(20, 4), enable_events=True, key='-BOX_LEFT-',
                                 select_mode=sg.LISTBOX_SELECT_MODE_SINGLE, no_scrollbar=True)]],
@@ -198,18 +205,20 @@ col4 = sg.Column([
 
 #column declaration with right input
 col5 = sg.Column([
-    [sg.Text('Kod motoru:')],
+    [sg.Text('Product number:')],
     [sg.Input(size=(20, 1), enable_events=True, key='-IN_RIGHT-')],
     [sg.pin(sg.Col([[sg.Listbox(values=[], size=(20, 4), enable_events=True, key='-BOX_RIGHT-',
                                 select_mode=sg.LISTBOX_SELECT_MODE_SINGLE, no_scrollbar=True)]],
                    key='-BOX-CONTAINER_RIGHT-', pad=(0, 0), visible=False))]])
 
-layout = [[sg.Push(), col3, sg.Push()],
-          [col4, sg.Push(), col5],
-          [col1, col2]]
+layout = [[sg.Menu(menu_def, )],
+          [col4, sg.Push(), col3, sg.Push(), col5],
+          [col1, col2],]
 
 window = sg.Window('Columns and Frames', layout, return_keyboard_events=True, finalize=True, font=('Helvetica', 16),
                    resizable=True, size=(1200, 800))
+
+
 list_element_left: sg.Listbox = window.Element(
     '-BOX_LEFT-')  # store listbox element for easier access and to get to docstrings
 list_element_right: sg.Listbox = window.Element(
@@ -226,7 +235,7 @@ while True:
     if event == sg.WIN_CLOSED:
         break
 
-    elif event == '-FILES-':
+    elif event == 'Load data':
         try:
             files = sg.PopupGetFile('Select folder', no_window=True, multiple_files=True,
                                     file_types=(("Excel files", [".xls", ".xlsx"]),))
@@ -239,7 +248,7 @@ while True:
             print(e)
             sg.Popup('Wrong file', keep_on_top=True)
 
-    elif event == '-LOAD_SUB-':
+    elif event == 'Load subassemblies':
         try:
             files = sg.PopupGetFile('Select folder', no_window=True, multiple_files=True,
                                     file_types=(("Excel files", [".xls", ".xlsx"]),))
@@ -295,7 +304,7 @@ while True:
             except:
                 continue
 
-    elif event == '-EXPAND_SUB-':
+    elif event == 'Expand all subassemblies':
         if not table_clicked_right:
             try:
                 expand(sub_products, products)
@@ -310,7 +319,7 @@ while True:
             except:
                 continue
 
-    elif isinstance(event, tuple):
+    elif isinstance(event, tuple): #event to recognize which row in which table was clicked by user. Needed for rightclickmenu
         if event[0] == '-TABLE_LEFT-':
             table_clicked_left = event[2][0]
             table_clicked_right = False
@@ -326,7 +335,7 @@ while True:
         window['-TABLE_LEFT-'].update([])
         window['-TABLE_RIGHT-'].update([])
 
-    elif event == '-CLEAR_FILES-':
+    elif event == 'Clear data':
         products, parts, sub_products, sub_parts = [], [], [], []
         window['-IN_LEFT-'].update('')
         window['-BOX-CONTAINER_LEFT-'].update(visible=False)
@@ -393,5 +402,11 @@ while True:
         window['-IN_RIGHT-'].update(value=values['-BOX_RIGHT-'])
         window['-BOX-CONTAINER_RIGHT-'].update(visible=False)
         compare("box")
+
+    elif event == 'About...':
+        sg.popup("Simple app created to make work easier :)\n"
+                 "In case of any bugs/comments please contact me at:\nd.czarnecki@whitedriveproducts.com",
+            title = "About...",
+            keep_on_top = True,)
 
 window.close()
