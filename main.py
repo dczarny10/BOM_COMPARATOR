@@ -182,6 +182,12 @@ def mass_check():
     if event_m == 'OK':
         compared = []
         products_pairs = []
+        redFill = openpyxl.styles.PatternFill(start_color='FFFF0000',
+                              end_color='FFFF0000',
+                              fill_type='solid')
+        yellowFill = openpyxl.styles.PatternFill(start_color='FFFF00',
+                              end_color='FFFF00',
+                              fill_type='solid')
         header = ('Part name', 'Part number', 'Quantity PLM', 'Quanity SAP', 'OK?/NOK?')
         index_not_found = 5
         wb = openpyxl.Workbook()
@@ -204,6 +210,7 @@ def mass_check():
             else:
                 #header = ('Part name', 'Part number', 'Quantity PLM', 'Quanity SAP', 'OK?/NOK?')
                 ws = wb.create_sheet(title=products_list[count]) #create new sheet with product number as title
+                row_index = 2
                 for col, t in enumerate(header): #loop to write header
                     ws.cell(row=1, column=col+1).value = t
                 for part_PLM in data[j[0]]:
@@ -217,18 +224,34 @@ def mass_check():
                                 index = [0, part_SAP[1]]
                                 break
                     if index[0] == 1:
-                        compared.append((part_PLM[2], part_PLM[0], part_PLM[1], index[1], "OK"))
+                        #compared.append((part_PLM[2], part_PLM[0], part_PLM[1], index[1], "OK"))
+                        ws.cell(row=row_index, column=1).value = part_PLM[2]
+                        ws.cell(row=row_index, column=2).value = part_PLM[0]
+                        ws.cell(row=row_index, column=3).value = part_PLM[1]
+                        ws.cell(row=row_index, column=4).value = index[1]
+                        ws.cell(row=row_index, column=5).value = "OK"
                     elif index[0] == 0:
-                        compared.append((part_PLM[2], part_PLM[0], part_PLM[1], index[1], "NOK"))
+                        #compared.append((part_PLM[2], part_PLM[0], part_PLM[1], index[1], "NOK"))
+                        ws.cell(row=row_index, column=1).value = part_PLM[2]
+                        ws.cell(row=row_index, column=2).value = part_PLM[0]
+                        ws.cell(row=row_index, column=3).value = part_PLM[1]
+                        ws.cell(row=row_index, column=4).value = index[1]
+                        ws.cell(row=row_index, column=5).value = "NOK"
+                        ws.cell(row=row_index, column=5).fill = yellowFill
                     else:
-                        compared.append((part_PLM[2], part_PLM[0], part_PLM[1], "0", "NOK"))
+                        #compared.append((part_PLM[2], part_PLM[0], part_PLM[1], "0", "NOK"))
+                        ws.cell(row=row_index, column=1).value = part_PLM[2]
+                        ws.cell(row=row_index, column=2).value = part_PLM[0]
+                        ws.cell(row=row_index, column=3).value = part_PLM[1]
+                        ws.cell(row=row_index, column=4).value = "0"
+                        ws.cell(row=row_index, column=5).value = "NOK"
+                        ws.cell(row=row_index, column=5).fill = redFill
 
-                for row, row_text in enumerate(compared): #loop to write data
-                    for col, t in enumerate(row_text):
-                        ws.cell(row=row+2, column=col+1).value = t
+                    row_index += 1
 
-
-
+                #for row, row_text in enumerate(compared): #loop to write data
+                    #for col, t in enumerate(row_text):
+                        #ws.cell(row=row+2, column=col+1).value = t
 
         wb.save(filename = r'C:\Users\u331609\Desktop\mass check\mass_check.xlsx')
         sg.Popup("Successful")
