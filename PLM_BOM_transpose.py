@@ -5,7 +5,9 @@ import tempfile
 
 def load_files(paths):
     pattern = "(\d+-?\w?\d+-?\d*)-(.+)"
-    data_SAP, results_PLM, products_list, data = [], [], [], []
+    data_SAP, results_PLM, products_list = [], [], []
+    data = {}
+
     for file in paths:
         if file.lower().endswith("xls"):
             excel = win32.gencache.EnsureDispatch('Excel.Application')
@@ -37,27 +39,28 @@ def load_files(paths):
             continue
         wb_PLM = openpyxl.load_workbook(file)
         ws_PLM = wb_PLM.active
-        data_PLM = list(ws_PLM.iter_rows(values_only=True))
+        data_PLM = list(ws_PLM.iter_rows(values_only=True)) #create a list of all rows in excel file
         #products = ["-".join(i.split("-")[:-2]) for i in data_PLM[0][3:]]
-        products = [i for i in data_PLM[0][3:]]
-        data_PLM = data_PLM[1:]
+        products = [i for i in data_PLM[0][3:]] #create products numbers list
+        data_PLM = data_PLM[1:] #remove headlines in excel file
         for count, i in enumerate(products):
+            data.setdefault(i, [])
             for j in data_PLM:
-                if j[3+count] != "0":
-                    r = re.findall(pattern, j[0])
+                if j[3+count] != "0": #if part belong to this product
+                    r = re.findall(pattern, j[0]) #find part number #python regular expression because part numbers are sadly not standarized now
                     index = -1
-                    for k, obj in enumerate(results_PLM):
+                    for k, obj in enumerate(results_PLM): #check if part is already under this product BOM
                         if obj[0] == i:
                             if obj[1] == r[0][0]:
                                 index = k
                                 break
                     if index == -1:
-                        results_PLM.append((i, r[0][0], j[3 + count].split(".")[0], r[0][1]))
+                        data[i].append((r[0][0], j[3 + count].split(".")[0], r[0][1]))
                     else:
                         results_PLM[index] = (results_PLM[index][0], results_PLM[index][1], str(int(results_PLM[index][2]) + int(j[3 + count].split(".")[0])), results_PLM[index][3])
-
+                        ### data[i]=
 
                     if not i in products_list:
                         products_list.append(i)
 
-    return  products_list,  results_PLM + data_SAP
+    return data
