@@ -9,7 +9,8 @@ def load_files(paths):
 
     for file in paths:
         if file.lower().endswith("xls"):
-            excel = win32.gencache.EnsureDispatch('Excel.Application')
+            #excel = win32.gencache.EnsureDispatch('Excel.Application')
+            excel = win32.Dispatch('Excel.Application')
             wb = excel.Workbooks.Open(file)
             excel.DisplayAlerts = False
             excel.Visible = False
