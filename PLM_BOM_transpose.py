@@ -5,10 +5,12 @@ import tempfile
 
 def load_files(paths):
     pattern = "(\d+-?\w?\d+-?\d*)-(.+)"
-    data_SAP, results_PLM, products_list, data = [], [], [], []
+    data = {}
+
     for file in paths:
         if file.lower().endswith("xls"):
-            excel = win32.gencache.EnsureDispatch('Excel.Application')
+            #excel = win32.gencache.EnsureDispatch('Excel.Application')
+            excel = win32.Dispatch('Excel.Application')
             wb = excel.Workbooks.Open(file)
             excel.DisplayAlerts = False
             excel.Visible = False
@@ -21,43 +23,37 @@ def load_files(paths):
             ws_SAP.delete_rows(1, 3)
             ws_SAP.delete_cols(5, 10)
             for q in ws_SAP.iter_rows(values_only=True):
+                product_name = str(q[0])+"_SAP"
+                data.setdefault(product_name, [])
                 index = -1
-                for i, obj in enumerate(data_SAP):
-                    if obj[0]== (str(q[0])+"_SAP"):
-                        if obj[1] == q[1]:
-                            index = i
-                            break
+                for i, obj in enumerate(data[product_name]):
+                    if obj[0] == q[1]:
+                        index = i
+                        break
                 if index == -1:
-                    data_SAP.append(tuple(map(str, (str(q[0])+"_SAP", q[1], q[2], q[3]))))
+                    data[product_name].append(tuple(map(str, (q[1], q[2], q[3]))))
                 else:
-                    data_SAP[index] = (data_SAP[index][0], data_SAP[index][1], str(int(data_SAP[index][2])+int(q[2])), data_SAP[index][3])
-                if not str(q[0])+"_SAP" in products_list:
-                    products_list.append(str(q[0])+"_SAP")
+                    data[product_name][index] = (data[product_name][index][0], str(int(data[product_name][index][1])+int(q[2])), data[product_name][index][2])
             os.remove(tempfile.gettempdir()+"BOM_COMPARATOR_TEMP.xlsx")
             continue
         wb_PLM = openpyxl.load_workbook(file)
         ws_PLM = wb_PLM.active
-        data_PLM = list(ws_PLM.iter_rows(values_only=True))
-        #products = ["-".join(i.split("-")[:-2]) for i in data_PLM[0][3:]]
-        products = [i for i in data_PLM[0][3:]]
-        data_PLM = data_PLM[1:]
+        data_PLM = list(ws_PLM.iter_rows(values_only=True)) #create a list of all rows in excel file
+        products = [i for i in data_PLM[0][3:]] #create products numbers list
+        data_PLM = data_PLM[1:] #remove headlines in excel file
         for count, i in enumerate(products):
+            data.setdefault(i, [])
             for j in data_PLM:
-                if j[3+count] != "0":
-                    r = re.findall(pattern, j[0])
+                if j[3+count] != "0": #if part belong to this product
+                    r = re.findall(pattern, j[0]) #find part number #python regular expression because part numbers are sadly not standarized now
                     index = -1
-                    for k, obj in enumerate(results_PLM):
-                        if obj[0] == i:
-                            if obj[1] == r[0][0]:
-                                index = k
-                                break
+                    for k, obj in enumerate(data[i]): #check if part is already under this product BOM
+                        if obj[0] == r[0][0]:
+                            index = k
+                            break
                     if index == -1:
-                        results_PLM.append((i, r[0][0], j[3 + count].split(".")[0], r[0][1]))
+                        data[i].append((r[0][0], j[3 + count].split(".")[0], r[0][1]))
                     else:
-                        results_PLM[index] = (results_PLM[index][0], results_PLM[index][1], str(int(results_PLM[index][2]) + int(j[3 + count].split(".")[0])), results_PLM[index][3])
+                        data[i][index] = (data[i][index][0], str(int(data[i][index][1]) + int(j[3 + count].split(".")[0])), data[i][index][2])
 
-
-                    if not i in products_list:
-                        products_list.append(i)
-
-    return  products_list,  results_PLM + data_SAP
+    return data

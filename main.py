@@ -1,14 +1,19 @@
 import PySimpleGUI as sg
+import openpyxl
 import PLM_BOM_transpose
 
 sg.theme("DarkTeal12")
 
 def PopupQuickView(subassembly):
-    if not any(subassembly[0] in i for i in sub_products): #check if subassembly is loaded. #any because products is list of tuples and need to iterate throught it
+    subassembly_revs = [i for i in data_subassemblies.keys() if subassembly[0] in i]
+    if not subassembly_revs:
         sg.Popup("No such subassembly loaded")
         return None
+    elif len(subassembly_revs) > 1:
+        sg.Popup("More than one subassembly with this number loaded")
+        return None
 
-    subassembly_parts = sorted([i[1:] for i in sub_parts if subassembly[0] in i[0]]) #create list of parts that are in picked subassembly. #i[1:] because first position in parts is product number which is not needed here
+    subassembly_parts = sorted(data_subassemblies[subassembly_revs[0]]) #create list of parts that are in picked subassembly
     #declaration for QuickView table
     window_q = sg.Window("QuickView",
                          [[sg.Table(values=subassembly_parts, headings=headings, max_col_width=700,
@@ -47,8 +52,11 @@ def compare(source):
             picked_right = values['-IN_RIGHT-'].replace("'", "").replace(",", "").replace("(", "").replace(")", "") #removes ',() from input
         else:
             picked_right = values['-BOX_RIGHT-'][0]
-        parts_right = sorted([i[1:] for i in parts if i[0] == picked_right]) #create list of parts that are in picked product
-        window['-TABLE_RIGHT-'].update(parts_right) #update Table
+        if picked_right in data.keys():
+            parts_right = sorted(data[picked_right])
+            window['-TABLE_RIGHT-'].update(parts_right) #update Table
+        else:
+            window['-TABLE_RIGHT-'].update([])  # if user erased input set table to empty
 
     else:
         window['-TABLE_RIGHT-'].update([]) #if user erased input set table to empty
@@ -58,8 +66,11 @@ def compare(source):
             picked_left = values['-IN_LEFT-'].replace("'", "").replace(",", "").replace("(", "").replace(")", "") #removes ',() from input
         else:
             picked_left = values['-BOX_LEFT-'][0]
-        parts_left = sorted([i[1:] for i in parts if i[0] == picked_left]) #create list of parts that are in picked product
-        window['-TABLE_LEFT-'].update(parts_left) #update Table
+        if picked_left in data.keys():
+            parts_left = sorted(data[picked_left])
+            window['-TABLE_LEFT-'].update(parts_left) #update Table
+        else:
+            window['-TABLE_LEFT-'].update([])  # if user erased input set table to empty
 
     else:
         window['-TABLE_LEFT-'].update([]) #if user erased input set table to empty
@@ -96,60 +107,192 @@ def compare(source):
         window['-TABLE_LEFT-'].update(row_colors=((0, ''),))
         window['-TABLE_RIGHT-'].update(row_colors=((0, ''),))
 
+def sum_parts():
+    for k in data.keys():  # iterate through all products
+        # for c, part in enumerate(data[k]):
+        #     for h in range(c, len(data[k])):
+        #         if
+        for part in data[k]:
+            counted = [i[1] for i in data[k] if i[0]==part[0]]
+            if len(counted) > 1:
+                data[k] = [i for i in data[k] if i[0]!=part[0]]
+                data[k].extend([(part[0], str(sum(map(int, counted))), part[2])])
+    return True
+
 def expand(parts_to_expand, products_to_expand):
-    if not any(parts_to_expand[0] in i for i in sub_products): #check if subassembly is loaded. #any because products is list of tuples and need to iterate throught it
-        sg.Popup("No such subassembly loaded")
-        return None
-    if type(products_to_expand) == str: #if extend only one part for one product
-        products_to_expand = products_to_expand.replace("'", "").replace(",", "").replace("(", "").replace(")", "")
-        index = -1
-        for i, obj in enumerate(parts):  #enumerate through loaded parts
-            if obj[0] == products_to_expand:  #if picked product
-                if obj[1] == parts_to_expand[0]:  #if same part
+
+    if parts_to_expand == "all_subassemblies":
+        for o in data_subassemblies.keys():  # iterate through all subassembly products
+            subassembly_parts = data_subassemblies[o]
+            if o.endswith("_SAP"):  # strip subassembly product number of _SAP or plant and revision level
+                o = o[:-4]
+            else:
+                o = o[:-10]
+            for k in data.keys():  # iterate through all products
+                index = -1
+                for i, obj in enumerate(data[k]):  # enumerate through loaded parts
+                    if obj[0] == o:  # if same part
+                        index = i
+                        break
+                if index > -1:
+                    del data[k][index]  # delete original part
+                    #data[k].extend([(i[0] + "_m", i[1], i[2]) for i in subassembly_parts])
+                    data[k].extend([(i[0], i[1], i[2]) for i in subassembly_parts])
+
+    else: #if extend only one part for all products #parts_to_expand == part number
+        subassembly_revs = [i for i in data_subassemblies.keys() if parts_to_expand[0] in i]
+        if not subassembly_revs:
+            sg.Popup("No such subassembly loaded")
+            return None
+        elif len(subassembly_revs) > 1:
+            sg.Popup("More than one subassembly with this part number loaded")
+            #add option to pick which one to use
+            return None
+        if products_to_expand == "all_products":
+            subassembly_parts = data_subassemblies[subassembly_revs[0]]
+            for k in data.keys(): #iterate through all products
+                index = -1
+                for i, obj in enumerate(data[k]):  # enumerate through loaded parts
+                    if obj[0] == parts_to_expand[0]:  # if same part
+                        index = i
+                        break
+                if index > -1:
+                    del data[k][index]  # delete original part
+                    #data[k].extend([(i[0] + "_m", i[1], i[2]) for i in subassembly_parts])  # add subassembly parts to parts list
+                    data[k].extend([(i[0], i[1], i[2]) for i in subassembly_parts])  # add subassembly parts to parts list
+
+        else:#if extend only one part for one product
+            subassembly_parts = data_subassemblies[subassembly_revs[0]]
+            products_to_expand = products_to_expand.replace("'", "").replace(",", "").replace("(", "").replace(")", "")
+            index = -1
+            for i, obj in enumerate(data[products_to_expand]):  # enumerate through loaded parts
+                if obj[0] == parts_to_expand[0]:  # if same part
                     index = i
                     break
-        subassembly_parts = sorted([i[1:] for i in sub_parts if parts_to_expand[0] in i[0]]) #create list with subassembly parts
-        del parts[index] #delete original part
-        parts.extend([(products_to_expand, i[0]+"_M", i[1], i[2]) for i in subassembly_parts]) #add subassembly parts to parts list
+            del data[products_to_expand][index] #delete original part
+           #data[products_to_expand].extend([(i[0]+"_m", i[1], i[2]) for i in subassembly_parts]) #add subassembly parts to parts list
+            data[products_to_expand].extend([(i[0], i[1], i[2]) for i in subassembly_parts])  # add subassembly parts to parts list
 
-    else:
-        if len(parts_to_expand) == 1: #if extend only one part for all products
-            for k in products_to_expand: #iterate through all products
-                index = -1
-                for i, obj in enumerate(parts):  # enumerate through loaded parts
-                    if obj[0] == k:  # if picked product
-                        if obj[1] == parts_to_expand[0]:  # if same part
-                            index = i
-                            break
-                if index > -1:
-                    subassembly_parts = sorted([i[1:] for i in sub_parts if parts_to_expand[0] in i[0]])  # create list with subassembly parts
-                    del parts[index]  # delete original part
-                    parts.extend([(k, i[0] + "_M", i[1], i[2]) for i in subassembly_parts])  # add subassembly parts to parts list
 
-        else:
-            for o in sub_products: #iterate through all subassembly products
-                if o.endswith("_SAP"): #strip subassembly product number of _SAP or plant and revision level
-                    o = o[:-4]
-                else:
-                    o = o[:-10]
-                for k in products_to_expand: #iterate through all products
-                    index = -1
-                    for i, obj in enumerate(parts):  #iterate through all loaded parts
-                        if obj[0] == k:  # if same product
-                            if obj[1] == o:  # if same part
-                                index = i
+    sum_parts()
+    return True
+
+def mass_check():
+    if len(data) < 1:
+        sg.Popup("No parts loaded")
+        return False
+
+    window_m = sg.Window("PLM vs SAP mass check",
+                         [[sg.Text('Quickly check all differences between SAP and PLM')],
+                          [sg.Text('Make sure both data from SAP and PLM are loaded')],
+                          [sg.Checkbox('Expand all subassemblies:', default=False, key='-EXPAND-')],
+                          [sg.Button('OK')], ],
+                         finalize=True, font=('Helvetica', 16),
+                         resizable=True, size=(600, 200))
+
+    event_m, values_m = window_m.read()
+    print(event_m, values_m)
+    # if event_m == sg.WIN_CLOSED:
+    #     break
+    if event_m == 'OK':
+        compared = []
+        products_pairs = []
+        redFill = openpyxl.styles.PatternFill(start_color='FFFF0000',
+                              end_color='FFFF0000',
+                              fill_type='solid')
+        yellowFill = openpyxl.styles.PatternFill(start_color='FFFF00',
+                              end_color='FFFF00',
+                              fill_type='solid')
+        header = ('Part name', 'Part number', 'Quantity PLM', 'Quanity SAP', 'OK?/NOK?')
+        index_not_found = 5
+        wb = openpyxl.Workbook()
+        ws1 = wb.active
+        ws1.column_dimensions['A'].width = 50
+        ws1.title = "Info"
+        ws1['A1'] = "Data generated by mass check"
+        ws1['A2'] = "Each product have an individual tab with report"
+        ws1['A4'] = "Products where no pair was found:"
+        if values_m['-EXPAND-']:
+            expand("all_subassemblies", "all_products")
+        products_list = tuple(set([i[:-4] if i.endswith('_SAP') else i[:-10] for i in data.keys()])) #create a products lists without _SAP or revision
+
+        for p in products_list:
+            products_pairs.append(sorted([i for i in data.keys() if i.startswith(p)])) #create pairs of SAP and PLM product number
+        for count, j in enumerate(products_pairs):
+            if len(j) < 2: #no pair in loaded data
+                ws1.cell(row=index_not_found, column=1).value = j[0] #write product number
+                index_not_found += 1
+            else:
+                #header = ('Part name', 'Part number', 'Quantity PLM', 'Quanity SAP', 'OK?/NOK?')
+                ws = wb.create_sheet(title=products_list[count]) #create new sheet with product number as title
+                row_index = 2
+                for col, t in enumerate(header): #loop to write header
+                    ws.cell(row=1, column=col+1).value = t
+                for part_PLM in data[j[0]]:
+                    index = [-1]
+                    for part_SAP in data[j[1]]:
+                        if part_PLM[0] == part_SAP[0]: #if part found
+                            if part_PLM[1] == part_SAP[1]: #if same quantity
+                                index = [1, part_SAP[1]]
                                 break
-                    if index > -1: #if found same part in same product
-                        subassembly_parts = sorted([i[1:] for i in sub_parts if o in i[0]])  # create list with subassembly parts
-                        del parts[index]  # delete original part
-                        parts.extend([(k, i[0] + "_M", i[1], i[2]) for i in subassembly_parts])  # add subassembly parts to parts list
+                            else: #if not same quanity
+                                index = [0, part_SAP[1]]
+                                break
+                    if index[0] == 1:
+                        #compared.append((part_PLM[2], part_PLM[0], part_PLM[1], index[1], "OK"))
+                        ws.cell(row=row_index, column=1).value = part_PLM[2]
+                        ws.cell(row=row_index, column=2).value = part_PLM[0]
+                        ws.cell(row=row_index, column=3).value = part_PLM[1]
+                        ws.cell(row=row_index, column=4).value = index[1]
+                        ws.cell(row=row_index, column=5).value = "OK"
+                    elif index[0] == 0:
+                        #compared.append((part_PLM[2], part_PLM[0], part_PLM[1], index[1], "NOK"))
+                        ws.cell(row=row_index, column=1).value = part_PLM[2]
+                        ws.cell(row=row_index, column=2).value = part_PLM[0]
+                        ws.cell(row=row_index, column=3).value = part_PLM[1]
+                        ws.cell(row=row_index, column=4).value = index[1]
+                        ws.cell(row=row_index, column=5).value = "NOK"
+                        ws.cell(row=row_index, column=5).fill = yellowFill
+                    else:
+                        #compared.append((part_PLM[2], part_PLM[0], part_PLM[1], "0", "NOK"))
+                        ws.cell(row=row_index, column=1).value = part_PLM[2]
+                        ws.cell(row=row_index, column=2).value = part_PLM[0]
+                        ws.cell(row=row_index, column=3).value = part_PLM[1]
+                        ws.cell(row=row_index, column=4).value = "0"
+                        ws.cell(row=row_index, column=5).value = "NOK"
+                        ws.cell(row=row_index, column=5).fill = redFill
+
+                    row_index += 1
+
+                #for row, row_text in enumerate(compared): #loop to write data
+                    #for col, t in enumerate(row_text):
+                        #ws.cell(row=row+2, column=col+1).value = t
+
+                for part_SAP in data[j[1]]:
+                    index = -1
+                    for part_PLM in data[j[0]]:
+                        if part_PLM[0] == part_SAP[0]:  # if part found
+                            index = 1
+                            break
+                    if index == -1:
+                        ws.cell(row=row_index, column=1).value = part_SAP[2]
+                        ws.cell(row=row_index, column=2).value = part_SAP[0]
+                        ws.cell(row=row_index, column=3).value = "0"
+                        ws.cell(row=row_index, column=4).value = part_SAP[1]
+                        ws.cell(row=row_index, column=5).value = "NOK"
+                        ws.cell(row=row_index, column=5).fill = redFill
+                        row_index += 1
+
+        wb.save(filename = r'C:\Users\u331609\Desktop\eaton test\mass_check.xlsx')
+        sg.Popup("Successful")
+        window_m.close()
     return True
 
 headings = ["Part", "Qty", "Description"] #heading for tables
 
 menu_def = [['&File', ['&Load data', '&Load subassemblies', '&Clear data', 'E&xit']],
                 ['&Edit', ['&Expand all subassemblies' ],],
-                ['&Tools', ['&Compare BOMs', '&BOM Mass check'],],
+                ['&Tools', ['&Compare BOMs', '&SAP/PLM Mass check'],],
                 ['&Help', '&About...'], ]
 
 menu_top = [['&Compare'],['&Mass check'], ]
@@ -215,7 +358,7 @@ layout = [[sg.Menu(menu_def, )],
           [col4, sg.Push(), col3, sg.Push(), col5],
           [col1, col2],]
 
-window = sg.Window('Columns and Frames', layout, return_keyboard_events=True, finalize=True, font=('Helvetica', 16),
+window = sg.Window('Ultimate BOM Comparator', layout, return_keyboard_events=True, finalize=True, font=('Helvetica', 16),
                    resizable=True, size=(1200, 800))
 
 
@@ -225,7 +368,8 @@ list_element_right: sg.Listbox = window.Element(
     '-BOX_RIGHT-')  # store listbox element for easier access and to get to docstrings
 prediction_list_left, input_text_left, sel_item_left = [], "", 0
 prediction_list_right, input_text_right, sel_item_right = [], "", 0
-products, parts, sub_products, sub_parts = [], [], [], []
+data = {}
+data_subassemblies = {}
 
 table_clicked_right, table_clicked_left = False, False
 
@@ -239,11 +383,8 @@ while True:
         try:
             files = sg.PopupGetFile('Select folder', no_window=True, multiple_files=True,
                                     file_types=(("Excel files", [".xls", ".xlsx"]),))
-            products_t, parts_t = PLM_BOM_transpose.load_files(files)
-            products += products_t
-            parts += parts_t
-            products = list(set(products))
-            parts = list(set(parts))
+            data_t = PLM_BOM_transpose.load_files(files)
+            data.update(data_t)
         except Exception as e:
             print(e)
             sg.Popup('Wrong file', keep_on_top=True)
@@ -252,11 +393,8 @@ while True:
         try:
             files = sg.PopupGetFile('Select folder', no_window=True, multiple_files=True,
                                     file_types=(("Excel files", [".xls", ".xlsx"]),))
-            sub_products_t, sub_parts_t = PLM_BOM_transpose.load_files(files)
-            sub_products += sub_products_t
-            sub_parts += sub_parts_t
-            sub_products = list(set(sub_products))
-            sub_parts = list(set(sub_parts))
+            data_subassemblies_t = PLM_BOM_transpose.load_files(files)
+            data_subassemblies.update(data_subassemblies_t)
         except Exception as e:
             print(e)
             sg.Popup('Wrong file', keep_on_top=True)
@@ -288,36 +426,31 @@ while True:
             except:
                 continue
 
-
     elif event == "Expand for all":
         if not table_clicked_right:
             try:
-                expand(window['-TABLE_LEFT-'].get()[table_clicked_left], products)
+                expand(window['-TABLE_LEFT-'].get()[table_clicked_left], "all_products")
                 compare("input")
             except Exception as e:
                 print(e)
                 continue
         elif not table_clicked_left:
             try:
-                expand(window['-TABLE_RIGHT-'].get()[table_clicked_right], products)
+                expand(window['-TABLE_RIGHT-'].get()[table_clicked_right], "all_products")
                 compare("input")
             except:
                 continue
 
     elif event == 'Expand all subassemblies':
-        if not table_clicked_right:
-            try:
-                expand(sub_products, products)
-                compare("input")
-            except Exception as e:
-                print(e)
-                continue
-        elif not table_clicked_left:
-            try:
-                expand(sub_products, products)
-                compare("input")
-            except:
-                continue
+        try:
+            expand("all_subassemblies", "all_products")
+            compare("input")
+        except Exception as e:
+            print(e)
+            continue
+
+    elif event == 'SAP/PLM Mass check':
+        mass_check()
 
     elif isinstance(event, tuple): #event to recognize which row in which table was clicked by user. Needed for rightclickmenu
         if event[0] == '-TABLE_LEFT-':
@@ -336,7 +469,7 @@ while True:
         window['-TABLE_RIGHT-'].update([])
 
     elif event == 'Clear data':
-        products, parts, sub_products, sub_parts = [], [], [], []
+        data, data_subassemblies = {}, {}
         window['-IN_LEFT-'].update('')
         window['-BOX-CONTAINER_LEFT-'].update(visible=False)
         window['-IN_RIGHT-'].update('')
@@ -360,7 +493,7 @@ while True:
             input_text_left = text
         prediction_list_left = []
         if text:
-            prediction_list_left = [item for item in products if item.startswith(text)]
+            prediction_list_left = [item for item in data.keys() if item.startswith(text)]
 
         list_element_left.update(values=prediction_list_left)
         sel_item_left = 0
@@ -380,7 +513,7 @@ while True:
             input_text_right = text
         prediction_list_right = []
         if text:
-            prediction_list_right = [item for item in products if item.startswith(text)]
+            prediction_list_right = [item for item in data.keys() if item.startswith(text)]
 
         list_element_right.update(values=prediction_list_right)
         sel_item_right = 0
