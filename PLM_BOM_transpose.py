@@ -1,4 +1,4 @@
-import openpyxl, re, csv, os
+import openpyxl, re, os
 import win32com.client as win32
 import tempfile
 

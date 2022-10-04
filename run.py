@@ -1,6 +1,8 @@
 import PySimpleGUI as sg
 import openpyxl
 import PLM_BOM_transpose
+from os import path as os_path
+from os import environ
 
 sg.theme("DarkTeal12")
 
@@ -122,6 +124,9 @@ def sum_parts():
 def expand(parts_to_expand, products_to_expand):
 
     if parts_to_expand == "all_subassemblies":
+        if not data_subassemblies:
+            sg.Popup("No subassemblies loaded")
+            return None
         for o in data_subassemblies.keys():  # iterate through all subassembly products
             subassembly_parts = data_subassemblies[o]
             if o.endswith("_SAP"):  # strip subassembly product number of _SAP or plant and revision level
@@ -225,6 +230,11 @@ def mass_check():
             else:
                 #header = ('Part name', 'Part number', 'Quantity PLM', 'Quanity SAP', 'OK?/NOK?')
                 ws = wb.create_sheet(title=products_list[count]) #create new sheet with product number as title
+                ws.column_dimensions['A'].width = 35
+                ws.column_dimensions['B'].width = 15
+                ws.column_dimensions['C'].width = 13
+                ws.column_dimensions['D'].width = 13
+                ws.column_dimensions['E'].width = 10
                 row_index = 2
                 for col, t in enumerate(header): #loop to write header
                     ws.cell(row=1, column=col+1).value = t
@@ -283,8 +293,8 @@ def mass_check():
                         ws.cell(row=row_index, column=5).fill = redFill
                         row_index += 1
 
-        wb.save(filename = r'C:\Users\u331609\Desktop\eaton test\mass_check.xlsx')
-        sg.Popup("Successful")
+        wb.save(filename = (os_path.join(os_path.join(environ['USERPROFILE']), 'Desktop') + '\\mass_check_PLM_SAP.xlsx'))
+        sg.Popup("Successful\nExcel file: mass_check_PLM_SAP was created on your Desktop")
         window_m.close()
     return True
 
@@ -298,15 +308,16 @@ menu_def = [['&File', ['&Load data', '&Load subassemblies', '&Clear data', 'E&xi
 menu_top = [['&Compare'],['&Mass check'], ]
 #column declaration with left table
 col1 = sg.Column([[sg.Table(values=[[]], headings=headings, max_col_width=700,
-                            auto_size_columns=True,
+                            auto_size_columns=False,
                             display_row_numbers=False,
                             # justification='center',
                             cols_justification=['l', 'c', 'l'],
-                            def_col_width=50,
+                            #def_col_width=50,
+                            col_widths=[15, 5, 30],
                             right_click_selects=True,
                             num_rows=20,
                             key='-TABLE_LEFT-',
-                            selected_row_colors='red on yellow',
+                            selected_row_colors='white on blue',
                             enable_events=True,
                             expand_x=True,
                             expand_y=True,
@@ -316,15 +327,17 @@ col1 = sg.Column([[sg.Table(values=[[]], headings=headings, max_col_width=700,
                  pad=(0, 0), expand_x=True)
 
 #column declaration with right table
-col2 = sg.Column([[sg.Table(values=[[]], headings=headings, max_col_width=50,
-                            auto_size_columns=True,
+col2 = sg.Column([[sg.Table(values=[[]], headings=headings, max_col_width=700,
+                            auto_size_columns=False,
                             display_row_numbers=False,
                             # justification='right',
                             cols_justification=['l', 'c', 'l'],
+                            #def_col_width=50,
+                            col_widths=[10, 5, 30],
                             right_click_selects=True,
                             num_rows=20,
                             key='-TABLE_RIGHT-',
-                            selected_row_colors='red on yellow',
+                            selected_row_colors='white on blue',
                             enable_events=True,
                             expand_x=True,
                             expand_y=True,
@@ -359,7 +372,7 @@ layout = [[sg.Menu(menu_def, )],
           [col1, col2],]
 
 window = sg.Window('Ultimate BOM Comparator', layout, return_keyboard_events=True, finalize=True, font=('Helvetica', 16),
-                   resizable=True, size=(1200, 800))
+                   resizable=True, size=(1500, 700))
 
 
 list_element_left: sg.Listbox = window.Element(
