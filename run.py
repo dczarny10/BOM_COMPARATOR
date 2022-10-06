@@ -230,7 +230,7 @@ def mass_check():
             ws1['A4'] = "Products where no pair was found:"
             if values_m['-EXPAND-']:
                 expand("all_subassemblies", "all_products")
-            products_list = tuple(set([i[:-4] if i.endswith('_SAP') else i[:-10] for i in data.keys()])) #create a products lists without _SAP or revision
+            products_list = sorted(tuple(set([i[:-4] if i.endswith('_SAP') else i[:-10] for i in data.keys()]))) #create a products lists without _SAP or revision
 
             for p in products_list:
                 products_pairs.append(sorted([i for i in data.keys() if i.startswith(p)])) #create pairs of SAP and PLM product number
