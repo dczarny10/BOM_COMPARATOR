@@ -1,10 +1,11 @@
 import openpyxl, re, os
 import win32com.client as win32
 import tempfile
+import pandas as pd
 
 
 def load_files(paths):
-    pattern = "(\d+-?\w?\d+-?\d*)-(.+)"
+    pattern = "(\d+-?\w?\d+-?\d*P?C?H?M?)-(.+)"
     data = {}
 
     for file in paths:
@@ -38,22 +39,42 @@ def load_files(paths):
             continue
         wb_PLM = openpyxl.load_workbook(file)
         ws_PLM = wb_PLM.active
-        data_PLM = list(ws_PLM.iter_rows(values_only=True)) #create a list of all rows in excel file
-        products = [i for i in data_PLM[0][3:]] #create products numbers list
-        data_PLM = data_PLM[1:] #remove headlines in excel file
-        for count, i in enumerate(products):
-            data.setdefault(i, [])
-            for j in data_PLM:
-                if j[3+count] != "0": #if part belong to this product
-                    r = re.findall(pattern, j[0]) #find part number #python regular expression because part numbers are sadly not standarized now
-                    index = -1
-                    for k, obj in enumerate(data[i]): #check if part is already under this product BOM
-                        if obj[0] == r[0][0]:
-                            index = k
-                            break
-                    if index == -1:
-                        data[i].append((r[0][0], j[3 + count].split(".")[0], r[0][1]))
-                    else:
-                        data[i][index] = (data[i][index][0], str(int(data[i][index][1]) + int(j[3 + count].split(".")[0])), data[i][index][2])
+        if ws_PLM.title == 'BOM Matrix':
+            data_PLM = list(ws_PLM.iter_rows(values_only=True)) #create a list of all rows in excel file
+            products = [i for i in data_PLM[0][3:]] #create products numbers list
+            data_PLM = data_PLM[1:] #remove headlines in excel file
+            for count, i in enumerate(products):
+                data.setdefault(i, [])
+                for j in data_PLM:
+                    if j[3+count] != "0": #if part belong to this product
+                        r = re.findall(pattern, j[0]) #find part number #python regular expression because part numbers are sadly not standarized now
+                        index = -1
+                        for k, obj in enumerate(data[i]): #check if part is already under this product BOM
+                            if obj[0] == r[0][0]:
+                                index = k
+                                break
+                        if index == -1:
+                            data[i].append((r[0][0], j[3 + count].split(".")[0], r[0][1]))
+                        else:
+                            data[i][index] = (data[i][index][0], str(int(data[i][index][1]) + int(j[3 + count].split(".")[0])), data[i][index][2])
+
+        else:
+            data_PLM = list(ws_PLM.iter_rows(values_only=True))
+            data_PLM = data_PLM[1:]  # remove headlines in excel file
+            products = set([i[4] for i in data_PLM])
+            for count, i in enumerate(products):
+                data.setdefault(i, [])
+                for j in data_PLM:
+                    if j[4] == i: #if part belong to this product
+                        r = j[1].strip()
+                        index = -1
+                        for k, obj in enumerate(data[i]): #check if part is already under this product BOM
+                            if obj[0] == r:
+                                index = k
+                                break
+                        if index == -1:
+                            data[i].append((r, str(j[2]), j[3]))
+                        else:
+                            data[i][index] = (data[i][index][0], str(int(data[i][index][1]) + int(j[2])), data[i][index][2])
 
     return data

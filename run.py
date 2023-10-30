@@ -312,7 +312,7 @@ def mass_check():
 
 headings = ["Part", "Qty", "Description"] #heading for tables
 
-menu_def = [['&File', ['&Load data', '&Load subassemblies', '&Clear data', 'E&xit']],
+menu_def = [['&File', ['&Load data', '&Load subassemblies', '&Clear data', '&Exit']],
                 ['&Edit', ['&Expand all subassemblies' ],],
                 ['&Tools', ['&Compare BOMs', '&SAP/PLM Mass check'],],
                 ['&Help', '&About...'], ]
@@ -401,7 +401,7 @@ table_clicked_right, table_clicked_left = False, False
 while True:
     event, values = window.read()
     print(event, values)
-    if event == sg.WIN_CLOSED:
+    if event == sg.WIN_CLOSED or event == 'Exit':
         break
 
     elif event == 'Load data':
@@ -412,7 +412,7 @@ while True:
             data.update(data_t)
         except Exception as e:
             print(e)
-            sg.Popup('Wrong file', keep_on_top=True)
+            sg.Popup(f'Wrong file\n{e}', keep_on_top=True)
 
     elif event == 'Load subassemblies':
         try:
@@ -422,7 +422,7 @@ while True:
             data_subassemblies.update(data_subassemblies_t)
         except Exception as e:
             print(e)
-            sg.Popup('Wrong file', keep_on_top=True)
+            sg.Popup(f'Wrong file\n{e}', keep_on_top=True)
 
     elif event == "Quick view":
         if not table_clicked_right:
@@ -469,6 +469,10 @@ while True:
     elif event == 'Expand all subassemblies':
         try:
             expand("all_subassemblies", "all_products")
+            window['-TABLE_LEFT-'].update([])
+            window['-TABLE_RIGHT-'].update([])
+            window['-TABLE_LEFT-'].update(row_colors=((0, ''),))
+            window['-TABLE_RIGHT-'].update(row_colors=((0, ''),))
             compare("input")
         except Exception as e:
             print(e)
