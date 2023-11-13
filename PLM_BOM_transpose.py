@@ -11,10 +11,10 @@ def load_files(paths):
     for file in paths:
         if file.lower().endswith("xls"):
             #excel = win32.gencache.EnsureDispatch('Excel.Application')
-            excel = win32.Dispatch('Excel.Application')
-            wb = excel.Workbooks.Open(file)
+            excel = win32.DispatchEx("Excel.Application")
             excel.DisplayAlerts = False
             excel.Visible = False
+            wb = excel.Workbooks.Open(file)
             wb.SaveAs(tempfile.gettempdir()+"BOM_COMPARATOR_TEMP.xlsx", FileFormat=51)
             wb.Close()
             excel.Application.Quit()
@@ -57,24 +57,47 @@ def load_files(paths):
                             data[i].append((r[0][0], j[3 + count].split(".")[0], r[0][1]))
                         else:
                             data[i][index] = (data[i][index][0], str(int(data[i][index][1]) + int(j[3 + count].split(".")[0])), data[i][index][2])
+        elif ws_PLM.title == 'mmc':
+            data_PLM = list(ws_PLM.iter_rows(values_only=True))
+            data_PLM = data_PLM[1:]  # remove headlines in excel file
+            products = set([i[4] for i in data_PLM])
+            for count, i in enumerate(products):
+                product_name = i + "_MMC"
+                data.setdefault(product_name, [])
+                for j in data_PLM:
+                    if j[4] == i: #if part belong to this product
+                        r = j[1].strip()
+                        index = -1
+                        for k, obj in enumerate(data[product_name]): #check if part is already under this product BOM
+                            if obj[0] == r:
+                                index = k
+                                break
+                        if index == -1:
+                            data[product_name].append((r, str(j[2]), j[3]))
+                        else:
+                            if data[product_name][index][1] == ' ' or j[2] == ' ':
+                                data[product_name][index] = (data[product_name][index][0], ' ', data[product_name][index][2])
+                            else:
+                                data[product_name][index] = (data[product_name][index][0], str(int(data[product_name][index][1]) + int(j[2])), data[product_name][index][2])
 
         else:
             data_PLM = list(ws_PLM.iter_rows(values_only=True))
             data_PLM = data_PLM[1:]  # remove headlines in excel file
             products = set([i[4] for i in data_PLM])
             for count, i in enumerate(products):
-                data.setdefault(i, [])
+                product_name = i + "_PDF"
+                data.setdefault(product_name, [])
                 for j in data_PLM:
                     if j[4] == i: #if part belong to this product
                         r = j[1].strip()
                         index = -1
-                        for k, obj in enumerate(data[i]): #check if part is already under this product BOM
+                        for k, obj in enumerate(data[product_name]): #check if part is already under this product BOM
                             if obj[0] == r:
                                 index = k
                                 break
                         if index == -1:
-                            data[i].append((r, str(j[2]), j[3]))
+                            data[product_name].append((r, str(j[2]), j[3]))
                         else:
-                            data[i][index] = (data[i][index][0], str(int(data[i][index][1]) + int(j[2])), data[i][index][2])
+                            data[product_name][index] = (data[product_name][index][0], str(int(data[product_name][index][1]) + int(j[2])), data[product_name][index][2])
 
     return data

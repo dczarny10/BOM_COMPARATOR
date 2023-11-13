@@ -1,8 +1,11 @@
 import PySimpleGUI as sg
 import openpyxl
 import PLM_BOM_transpose
+import os
 from os import path as os_path
 from os import environ
+
+import mmc
 
 sg.theme("DarkTeal12")
 
@@ -208,8 +211,16 @@ def mass_check():
 
         elif event_m == 'OK':
             if not values_m['-SAVE-FILE-PATH-']:
-                sg.Popup("No path for save file specified")
+                sg.popup_error("No path for save file specified")
                 continue
+
+            if os.path.exists(values_m['-SAVE-FILE-PATH-']):
+                try:
+                    os.rename(values_m['-SAVE-FILE-PATH-'], values_m['-SAVE-FILE-PATH-'])
+                except:
+                    sg.popup_error("Please close specified file")
+                    continue
+
 
             compared = []
             products_pairs = []
@@ -219,7 +230,7 @@ def mass_check():
             yellowFill = openpyxl.styles.PatternFill(start_color='FFFF00',
                                   end_color='FFFF00',
                                   fill_type='solid')
-            header = ('Part name', 'Part number', 'Quantity PLM', 'Quanity SAP', 'OK?/NOK?')
+            header = ('Part name', 'Part number', 'Quantity PLM/PDF', 'Quanity SAP', 'OK?/NOK?')
             index_not_found = 5
             wb = openpyxl.Workbook()
             ws1 = wb.active
@@ -230,7 +241,7 @@ def mass_check():
             ws1['A4'] = "Products where no pair was found:"
             if values_m['-EXPAND-']:
                 expand("all_subassemblies", "all_products")
-            products_list = sorted(tuple(set([i[:-4] if i.endswith('_SAP') else i[:-10] for i in data.keys()]))) #create a products lists without _SAP or revision
+            products_list = sorted(tuple(set([i[:-4] if i[-4] == '_' else i[:-10] for i in data.keys()]))) #create a products lists without _SAP or revision
 
             for p in products_list:
                 products_pairs.append(sorted([i for i in data.keys() if i.startswith(p)])) #create pairs of SAP and PLM product number
@@ -310,11 +321,90 @@ def mass_check():
             break
     return True
 
+def mmc_check():
+    window.hide()
+    window.disable()
+    menu_def_mmc = [['&File', ['&Exit']],
+                ['&Edit', [], ],
+                ['&Tools', ['&Compare BOMs', '&SAP/PLM Mass check', '&MMC Encode'], ],
+                ['&Help', '&About...'], ]
+    layout_mmc =[[sg.Menu(menu_def_mmc, )],
+                 [sg.Text('Cincom logic file')],
+                 [sg.Input('', key='-CINCOM-FILE-PATH-'), sg.Button('Pick file', key='-CINCOM-FILE-BUTTON-')],
+                 [sg.Text('List of MMC files to encode. 1st column is part name, 2nd MMC')],
+                 [sg.Input('', key='-MMC-FILE-PATH-'), sg.Button('Pick file', key='-MMC-FILE-BUTTON-')],
+                 [sg.Text('Target file with encoded BOMs')],
+                 [sg.Input('', key='-BOM-FILE-PATH-'), sg.Button('Pick file', key='-BOM-FILE-BUTTON-')],
+                 [sg.HSeparator()],
+                 [sg.Text('Progress: '),sg.Text('', key='-MMC_PROGRESS-')],
+                 [sg.VPush()],
+                 [sg.Push(), sg.Button('OK')],
+
+                 ]
+
+    window_mmc = sg.Window('MMC check', layout_mmc,
+                           return_keyboard_events=True, finalize=True, font=('Helvetica', 16),
+                           resizable=True, size=(1000, 700))
+    window_mmc.move(window.current_location(more_accurate = False, without_titlebar = False)[0], window.current_location(more_accurate = False, without_titlebar = False)[1])
+
+    while True:
+        event_mmc, values_mmc = window_mmc.read()
+        print(event_mmc, values_mmc)
+        if event_mmc in (sg.WIN_CLOSED, 'Exit'):
+            window.close()
+            break
+        elif event_mmc == 'Compare BOMs':
+            window.move(window_mmc.current_location(more_accurate=False, without_titlebar=False)[0],
+                        window_mmc.current_location(more_accurate=False, without_titlebar=False)[1])
+            window.un_hide()
+            window.enable()
+            break
+        elif event_mmc == 'SAP/PLM Mass check':
+            mass_check()
+        elif event_mmc == '-CINCOM-FILE-BUTTON-':
+            save_file = sg.PopupGetFile('Select file', no_window=True, multiple_files=False, save_as= False, default_extension='xlsx',
+                            file_types=(("Excel file", [".xlsx"]),))
+            window_mmc['-CINCOM-FILE-PATH-'].update(save_file)
+
+        elif event_mmc == '-MMC-FILE-BUTTON-':
+            save_file = sg.PopupGetFile('Select file', no_window=True, multiple_files=False, save_as= False, default_extension='xlsx',
+                            file_types=(("Excel file", [".xlsx"]),))
+            window_mmc['-MMC-FILE-PATH-'].update(save_file)
+
+        elif event_mmc == '-BOM-FILE-BUTTON-':
+            save_file = sg.PopupGetFile('Select file', no_window=True, multiple_files=False, save_as= True, default_extension='xlsx',
+                            file_types=(("Excel file", [".xlsx"]),))
+            window_mmc['-BOM-FILE-PATH-'].update(save_file)
+
+
+
+        elif event_mmc == 'OK':
+            if not values_mmc['-CINCOM-FILE-PATH-']:
+                sg.popup_error("No path for CINCOM logic file specified")
+                continue
+            if not values_mmc['-MMC-FILE-PATH-']:
+                sg.popup_error("No path for MMC file specified")
+                continue
+            if not values_mmc['-BOM-FILE-PATH-']:
+                sg.popup_error("No path for target file specified")
+                continue
+            window_mmc.perform_long_operation(lambda: mmc.encode_mmc(values_mmc['-MMC-FILE-PATH-'], values_mmc['-CINCOM-FILE-PATH-'], values_mmc['-BOM-FILE-PATH-'], window_mmc), '-BOM_DONE-')
+
+        elif event_mmc == '-BOM_DONE-':
+            if values_mmc['-BOM_DONE-'] == 1:
+                sg.popup('Completed')
+                window_mmc['-MMC_PROGRESS-'].update('')
+            elif values_mmc['-BOM_DONE-'] == 'permission_error':
+                sg.popup_error('Permission denied\nPlease close target file')
+
+    window_mmc.close()
+
+
 headings = ["Part", "Qty", "Description"] #heading for tables
 
 menu_def = [['&File', ['&Load data', '&Load subassemblies', '&Clear data', '&Exit']],
                 ['&Edit', ['&Expand all subassemblies' ],],
-                ['&Tools', ['&Compare BOMs', '&SAP/PLM Mass check'],],
+                ['&Tools', ['&Compare BOMs', '&SAP/PLM Mass check', '&MMC Encode'],],
                 ['&Help', '&About...'], ]
 
 menu_top = [['&Compare'],['&Mass check'], ]
@@ -401,7 +491,7 @@ table_clicked_right, table_clicked_left = False, False
 while True:
     event, values = window.read()
     print(event, values)
-    if event == sg.WIN_CLOSED or event == 'Exit':
+    if event in (sg.WIN_CLOSED,'Exit'):
         break
 
     elif event == 'Load data':
@@ -570,5 +660,8 @@ while True:
                  "In case of any bugs/comments please contact me at:\nd.czarnecki@whitedriveproducts.com",
             title = "About...",
             keep_on_top = True,)
+
+    elif event == 'MMC Encode':
+        mmc_check()
 
 window.close()
