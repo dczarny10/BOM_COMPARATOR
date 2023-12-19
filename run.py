@@ -9,6 +9,13 @@ import mmc
 
 sg.theme("DarkTeal12")
 
+def popup_loading():
+    sg.theme('DarkGrey')
+    layout = [[sg.Text('Loading...',)]]
+    window = sg.Window('Message', layout, no_titlebar=True, keep_on_top=True, finalize=True)
+    sg.theme("DarkTeal12")
+    return window
+
 def PopupQuickView(subassembly):
     subassembly_revs = [i for i in data_subassemblies.keys() if subassembly[0] in i]
     if not subassembly_revs:
@@ -201,7 +208,7 @@ def mass_check():
 
     while True:
         event_m, values_m = window_m.read()
-        print(event_m, values_m)
+        #print(event_m, values_m)
         if event_m == sg.WIN_CLOSED:
             break
         elif event_m == '-SAVE-FILE-BUTTON-':
@@ -230,7 +237,7 @@ def mass_check():
             yellowFill = openpyxl.styles.PatternFill(start_color='FFFF00',
                                   end_color='FFFF00',
                                   fill_type='solid')
-            header = ('Part name', 'Part number', 'Quantity PLM/PDF', 'Quanity SAP', 'OK?/NOK?')
+            # header = ('Part name', 'Part number', 'Quantity PLM/PDF', 'Quanity SAP', 'OK?/NOK?')
             index_not_found = 5
             wb = openpyxl.Workbook()
             ws1 = wb.active
@@ -250,7 +257,8 @@ def mass_check():
                     ws1.cell(row=index_not_found, column=1).value = j[0] #write product number
                     index_not_found += 1
                 else:
-                    #header = ('Part name', 'Part number', 'Quantity PLM', 'Quanity SAP', 'OK?/NOK?')
+
+                    header = ('Part name', 'Part number', 'Quantity PLM', 'Quantity SAP', 'OK?/NOK?')
                     ws = wb.create_sheet(title=products_list[count]) #create new sheet with product number as title
                     ws.column_dimensions['A'].width = 35
                     ws.column_dimensions['B'].width = 15
@@ -285,6 +293,7 @@ def mass_check():
                             ws.cell(row=row_index, column=4).value = index[1]
                             ws.cell(row=row_index, column=5).value = "NOK"
                             ws.cell(row=row_index, column=5).fill = yellowFill
+                            ws.sheet_properties.tabColor = 'FFFF00'
                         else:
                             #compared.append((part_PLM[2], part_PLM[0], part_PLM[1], "0", "NOK"))
                             ws.cell(row=row_index, column=1).value = part_PLM[2]
@@ -293,6 +302,8 @@ def mass_check():
                             ws.cell(row=row_index, column=4).value = "0"
                             ws.cell(row=row_index, column=5).value = "NOK"
                             ws.cell(row=row_index, column=5).fill = redFill
+                            ws.sheet_properties.tabColor = 'FFFF0000'
+
 
                         row_index += 1
 
@@ -326,7 +337,7 @@ def mmc_check():
     window.disable()
     menu_def_mmc = [['&File', ['&Exit']],
                 ['&Edit', [], ],
-                ['&Tools', ['&Compare BOMs', '&SAP/PLM Mass check', '&MMC Encode'], ],
+                ['&Tools', ['&Compare BOMs', '&SAP/PLM Mass Check', '&MMC Mass Encode'], ],
                 ['&Help', '&About...'], ]
     layout_mmc =[[sg.Menu(menu_def_mmc, )],
                  [sg.Text('Cincom logic file')],
@@ -335,6 +346,8 @@ def mmc_check():
                  [sg.Input('', key='-MMC-FILE-PATH-'), sg.Button('Pick file', key='-MMC-FILE-BUTTON-')],
                  [sg.Text('Target file with encoded BOMs')],
                  [sg.Input('', key='-BOM-FILE-PATH-'), sg.Button('Pick file', key='-BOM-FILE-BUTTON-')],
+                 [sg.Text('Exclude specific tabs (need full name, separate with ;)')],
+                 [sg.Input('', key='-MMC-EXCLUDE-')],
                  [sg.HSeparator()],
                  [sg.Text('Progress: '),sg.Text('', key='-MMC_PROGRESS-')],
                  [sg.VPush()],
@@ -349,7 +362,7 @@ def mmc_check():
 
     while True:
         event_mmc, values_mmc = window_mmc.read()
-        print(event_mmc, values_mmc)
+        #print(event_mmc, values_mmc)
         if event_mmc in (sg.WIN_CLOSED, 'Exit'):
             window.close()
             break
@@ -359,7 +372,7 @@ def mmc_check():
             window.un_hide()
             window.enable()
             break
-        elif event_mmc == 'SAP/PLM Mass check':
+        elif event_mmc == 'SAP/PLM Mass Check':
             mass_check()
         elif event_mmc == '-CINCOM-FILE-BUTTON-':
             save_file = sg.PopupGetFile('Select file', no_window=True, multiple_files=False, save_as= False, default_extension='xlsx',
@@ -388,7 +401,7 @@ def mmc_check():
             if not values_mmc['-BOM-FILE-PATH-']:
                 sg.popup_error("No path for target file specified")
                 continue
-            window_mmc.perform_long_operation(lambda: mmc.encode_mmc(values_mmc['-MMC-FILE-PATH-'], values_mmc['-CINCOM-FILE-PATH-'], values_mmc['-BOM-FILE-PATH-'], window_mmc), '-BOM_DONE-')
+            window_mmc.perform_long_operation(lambda: mmc.encode_mmc(values_mmc['-MMC-FILE-PATH-'], values_mmc['-CINCOM-FILE-PATH-'], values_mmc['-BOM-FILE-PATH-'], values_mmc['-MMC-EXCLUDE-'].split(';') , window_mmc), '-BOM_DONE-')
 
         elif event_mmc == '-BOM_DONE-':
             if values_mmc['-BOM_DONE-'] == 1:
@@ -404,7 +417,7 @@ headings = ["Part", "Qty", "Description"] #heading for tables
 
 menu_def = [['&File', ['&Load data', '&Load subassemblies', '&Clear data', '&Exit']],
                 ['&Edit', ['&Expand all subassemblies' ],],
-                ['&Tools', ['&Compare BOMs', '&SAP/PLM Mass check', '&MMC Encode'],],
+                ['&Tools', ['&Compare BOMs', '&SAP/PLM Mass Check', '&MMC Mass Encode'],],
                 ['&Help', '&About...'], ]
 
 menu_top = [['&Compare'],['&Mass check'], ]
@@ -498,8 +511,8 @@ while True:
         try:
             files = sg.PopupGetFile('Select folder', no_window=True, multiple_files=True,
                                     file_types=(("Excel files", [".xls", ".xlsx"]),))
-            data_t = PLM_BOM_transpose.load_files(files)
-            data.update(data_t)
+            popup_load = popup_loading()
+            window.perform_long_operation(lambda: PLM_BOM_transpose.load_files(files), '-DATA-LOADING-DONE-')
         except Exception as e:
             print(e)
             sg.Popup(f'Wrong file\n{e}', keep_on_top=True)
@@ -508,11 +521,20 @@ while True:
         try:
             files = sg.PopupGetFile('Select folder', no_window=True, multiple_files=True,
                                     file_types=(("Excel files", [".xls", ".xlsx"]),))
-            data_subassemblies_t = PLM_BOM_transpose.load_files(files)
-            data_subassemblies.update(data_subassemblies_t)
+            popup_load = popup_loading()
+            window.perform_long_operation(lambda: PLM_BOM_transpose.load_files(files), '-SUBASSEMBLY-LOADING-DONE-')
         except Exception as e:
             print(e)
             sg.Popup(f'Wrong file\n{e}', keep_on_top=True)
+
+    elif event == '-SUBASSEMBLY-LOADING-DONE-':
+        data_subassemblies.update(values['-SUBASSEMBLY-LOADING-DONE-'])
+        popup_load.close()
+
+    elif event == '-DATA-LOADING-DONE-':
+        data.update(values['-DATA-LOADING-DONE-'])
+        popup_load.close()
+
 
     elif event == "Quick view":
         if not table_clicked_right:
@@ -568,7 +590,7 @@ while True:
             print(e)
             continue
 
-    elif event == 'SAP/PLM Mass check':
+    elif event == 'SAP/PLM Mass Check':
         mass_check()
 
     elif isinstance(event, tuple): #event to recognize which row in which table was clicked by user. Needed for rightclickmenu
@@ -661,7 +683,7 @@ while True:
             title = "About...",
             keep_on_top = True,)
 
-    elif event == 'MMC Encode':
+    elif event == 'MMC Mass Encode':
         mmc_check()
 
 window.close()

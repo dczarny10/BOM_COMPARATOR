@@ -47,7 +47,7 @@ import openpyxl
 # 'ACC_f_19': mmc[26:27],
 # 'ACC_f_20': mmc[27:28],
 # 'ACC_f_21': mmc[28:29]}
-def encode_mmc(mmc_list, constrains, target_file, window):
+def encode_mmc(mmc_list, constrains, target_file, excluded, window):
     mmc_list_file = pd.read_excel(mmc_list)
     workbook = openpyxl.Workbook()
     sheet = workbook['Sheet']
@@ -60,24 +60,24 @@ def encode_mmc(mmc_list, constrains, target_file, window):
     sheet.column_dimensions['E'].width = 15
     sheet.column_dimensions['F'].width = 41
 
-    sheet_conflicts = workbook.create_sheet('Conflicting conditions')
-    sheet_conflicts.append((['Parent part', 'MMC', 'TAB', 'Possible parts']))
-    sheet_conflicts.append((['', '', '', 'Part A', 'Qty A', 'Part B', 'Qty B']))
-    sheet_conflicts.merge_cells('A1:A2')
-    sheet_conflicts.merge_cells('B1:B2')
-    sheet_conflicts.merge_cells('C1:C2')
-    sheet_conflicts.merge_cells('D1:G1')
-    sheet_conflicts.column_dimensions['A'].width = 16
-    sheet_conflicts.column_dimensions['B'].width = 41
-    sheet_conflicts.column_dimensions['C'].width = 32
-    sheet_conflicts.column_dimensions['D'].width = 17
-    sheet_conflicts.column_dimensions['E'].width = 10
-    sheet_conflicts.column_dimensions['F'].width = 17
-    sheet_conflicts.column_dimensions['G'].width = 10
-    sheet_conflicts.cell(1, 1).alignment = openpyxl.styles.Alignment(horizontal='center', vertical='center')
-    sheet_conflicts.cell(1, 2).alignment = openpyxl.styles.Alignment(horizontal='center', vertical='center')
-    sheet_conflicts.cell(1, 3).alignment = openpyxl.styles.Alignment(horizontal='center', vertical='center')
-    sheet_conflicts.cell(1, 4).alignment = openpyxl.styles.Alignment(horizontal='center', vertical='center')
+    # sheet_conflicts = workbook.create_sheet('Conflicting conditions')
+    # sheet_conflicts.append((['Parent part', 'MMC', 'TAB', 'Possible parts']))
+    # sheet_conflicts.append((['', '', '', 'Part A', 'Qty A', 'Part B', 'Qty B']))
+    # sheet_conflicts.merge_cells('A1:A2')
+    # sheet_conflicts.merge_cells('B1:B2')
+    # sheet_conflicts.merge_cells('C1:C2')
+    # sheet_conflicts.merge_cells('D1:G1')
+    # sheet_conflicts.column_dimensions['A'].width = 16
+    # sheet_conflicts.column_dimensions['B'].width = 41
+    # sheet_conflicts.column_dimensions['C'].width = 32
+    # sheet_conflicts.column_dimensions['D'].width = 17
+    # sheet_conflicts.column_dimensions['E'].width = 10
+    # sheet_conflicts.column_dimensions['F'].width = 17
+    # sheet_conflicts.column_dimensions['G'].width = 10
+    # sheet_conflicts.cell(1, 1).alignment = openpyxl.styles.Alignment(horizontal='center', vertical='center')
+    # sheet_conflicts.cell(1, 2).alignment = openpyxl.styles.Alignment(horizontal='center', vertical='center')
+    # sheet_conflicts.cell(1, 3).alignment = openpyxl.styles.Alignment(horizontal='center', vertical='center')
+    # sheet_conflicts.cell(1, 4).alignment = openpyxl.styles.Alignment(horizontal='center', vertical='center')
 
 
     try:
@@ -85,7 +85,6 @@ def encode_mmc(mmc_list, constrains, target_file, window):
     except PermissionError:
         return 'permission_error'
 
-    excluded = ['dr_c_900_INSTALLATION_DRAWING', 'dr_c_Service_information', 'dr_c_902', 'N01', 'N02', 'N03', 'N04', 'N05', 'N06']
 
     xls = pd.ExcelFile(constrains) #!!! Will only decode 1 family at a time !!!
 
@@ -260,21 +259,19 @@ def encode_mmc(mmc_list, constrains, target_file, window):
 
         done = np.empty([1, 5])
         for bom_position in xls.sheet_names:
-            if bom_position not in excluded and 'KIT' not in bom_position:
+            if bom_position not in excluded:
                 df = pd.read_excel(xls, bom_position, dtype=str, header=1)
                 conditions = [col for col in df.columns if col[0:8] in mmc.keys()]
-                for c in conditions:
-                    df = df[df[c].str.contains(mmc[c[0:8]])]
-                if df.shape[0] == 1:
-                    done = np.vstack((done, df.values[0][-5:]))
-                elif df.shape[0] == 2:
-                    # print(f'some weird condition {row["Part"]}')
-                    # print(bom_position)
-                    # print(df.iloc[:, -5])
-                    # print(row["Part"])
-                    sheet_conflicts.append([row[0], row[1], bom_position, df.iloc[0, -5], df.iloc[0, -4], df.iloc[1, -5], df.iloc[1, -4]])
-                    # workbook1.save(filename=target_file)
-                    # workbook1.close()
+                if conditions:
+                    for c in conditions:
+                        df = df[df[c].str.contains(mmc[c[0:8]])]
+                    if df.shape[0] == 1:
+                        if df.iloc[0, -1] == 'Active':
+                            done = np.vstack((done, df.values[0][-5:]))
+                    elif df.shape[0] == 2:
+                        if df.iloc[0, -1] == 'Active':
+                            #sheet_conflicts.append([row[0], row[1], bom_position, df.iloc[0, -5], df.iloc[0, -4], df.iloc[1, -5], df.iloc[1, -4]])
+                            done = np.vstack((done, df.values[1][-5:]))
         bom = pd.DataFrame(done[1:,:-1], columns=['Part', 'Qty', 'Position', 'Description'], dtype=str)
         bom['Parent'] = row[0]
         bom['MMC'] = row[1]
@@ -285,6 +282,8 @@ def encode_mmc(mmc_list, constrains, target_file, window):
 
         for r in rows:
             sheet.append(r)
+
+
 
     workbook.save(filename=target_file)
     workbook.close()

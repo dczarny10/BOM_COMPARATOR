@@ -34,10 +34,15 @@ def load_files(paths):
                 if index == -1:
                     data[product_name].append(tuple(map(str, (q[1], q[2], q[3]))))
                 else:
-                    data[product_name][index] = (data[product_name][index][0], str(int(data[product_name][index][1])+int(q[2])), data[product_name][index][2])
+                    try:
+                        data[product_name][index] = (data[product_name][index][0], str(int(data[product_name][index][1])+int(q[2])), data[product_name][index][2])
+                    except ValueError:
+                        print(product_name)
+                        print(data[product_name][index][0])
+
             os.remove(tempfile.gettempdir()+"BOM_COMPARATOR_TEMP.xlsx")
             continue
-        wb_PLM = openpyxl.load_workbook(file)
+        wb_PLM = openpyxl.load_workbook(file, data_only=True)
         ws_PLM = wb_PLM.active
         if ws_PLM.title == 'BOM Matrix':
             data_PLM = list(ws_PLM.iter_rows(values_only=True)) #create a list of all rows in excel file
@@ -56,11 +61,15 @@ def load_files(paths):
                         if index == -1:
                             data[i].append((r[0][0], j[3 + count].split(".")[0], r[0][1]))
                         else:
-                            data[i][index] = (data[i][index][0], str(int(data[i][index][1]) + int(j[3 + count].split(".")[0])), data[i][index][2])
+                            try:
+                                data[i][index] = (data[i][index][0], str(int(data[i][index][1]) + int(j[3 + count].split(".")[0])), data[i][index][2])
+                            except ValueError:
+                                print(product_name)
+                                print(data[product_name][index][0])
         elif ws_PLM.title == 'mmc':
             data_PLM = list(ws_PLM.iter_rows(values_only=True))
             data_PLM = data_PLM[1:]  # remove headlines in excel file
-            products = set([i[4] for i in data_PLM])
+            products = set([i[4] for i in data_PLM if i[4] is not None])
             for count, i in enumerate(products):
                 product_name = i + "_MMC"
                 data.setdefault(product_name, [])
@@ -78,12 +87,15 @@ def load_files(paths):
                             if data[product_name][index][1] == ' ' or j[2] == ' ':
                                 data[product_name][index] = (data[product_name][index][0], ' ', data[product_name][index][2])
                             else:
-                                data[product_name][index] = (data[product_name][index][0], str(int(data[product_name][index][1]) + int(j[2])), data[product_name][index][2])
-
+                                try:
+                                    data[product_name][index] = (data[product_name][index][0], str(int(data[product_name][index][1]) + int(j[2])), data[product_name][index][2])
+                                except ValueError:
+                                    print(product_name)
+                                    print(data[product_name][index][0])
         else:
             data_PLM = list(ws_PLM.iter_rows(values_only=True))
             data_PLM = data_PLM[1:]  # remove headlines in excel file
-            products = set([i[4] for i in data_PLM])
+            products = set([i[4] for i in data_PLM if i[4] is not None])
             for count, i in enumerate(products):
                 product_name = i + "_PDF"
                 data.setdefault(product_name, [])
@@ -98,6 +110,9 @@ def load_files(paths):
                         if index == -1:
                             data[product_name].append((r, str(j[2]), j[3]))
                         else:
-                            data[product_name][index] = (data[product_name][index][0], str(int(data[product_name][index][1]) + int(j[2])), data[product_name][index][2])
-
+                            try:
+                                data[product_name][index] = (data[product_name][index][0], str(int(data[product_name][index][1]) + int(j[2])), data[product_name][index][2])
+                            except ValueError:
+                                print(product_name)
+                                print(data[product_name][index][0])
     return data
