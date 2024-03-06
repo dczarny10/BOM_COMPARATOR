@@ -43,7 +43,7 @@ def load_files(paths):
             os.remove(tempfile.gettempdir()+"BOM_COMPARATOR_TEMP.xlsx")
             continue
         wb_PLM = openpyxl.load_workbook(file, data_only=True)
-        ws_PLM = wb_PLM.active
+        ws_PLM = wb_PLM.worksheets[0]
         if ws_PLM.title == 'BOM Matrix':
             data_PLM = list(ws_PLM.iter_rows(values_only=True)) #create a list of all rows in excel file
             products = [i for i in data_PLM[0][3:]] #create products numbers list
@@ -60,10 +60,10 @@ def load_files(paths):
                                 index = k
                                 break
                         if index == -1:
-                            data[i].append((r[0][0], j[3 + count].split(".")[0], r[0][1].strip()))
+                            data[i].append((r[0][0], j[3 + count].split(".")[0], r[0][1].strip(), j[1].strip('0') if j[1] is not None else ' '))
                         else:
                             try:
-                                data[i][index] = (data[i][index][0], str(int(data[i][index][1]) + int(j[3 + count].split(".")[0])), data[i][index][2])
+                                data[i][index] = (data[i][index][0], str(int(data[i][index][1]) + int(j[3 + count].split(".")[0])), data[i][index][2], str(data[i][index][3]) + ', ' + str(j[1].strip('0') if j[1] is not None else ' '))
                             except ValueError:
                                 print(product_name)
                                 print(data[product_name][index][0])
@@ -83,13 +83,13 @@ def load_files(paths):
                                 index = k
                                 break
                         if index == -1:
-                            data[product_name].append((r, str(j[2]), j[3].strip()))
+                            data[product_name].append((r, str(j[2]), j[3].strip(), j[0] if j[0] is not None else ' '))
                         else:
                             if data[product_name][index][1] == ' ' or j[2] == ' ':
                                 data[product_name][index] = (data[product_name][index][0], ' ', data[product_name][index][2])
                             else:
                                 try:
-                                    data[product_name][index] = (data[product_name][index][0], str(int(data[product_name][index][1]) + int(j[2])), data[product_name][index][2])
+                                    data[product_name][index] = (data[product_name][index][0], str(int(data[product_name][index][1]) + int(j[2])), data[product_name][index][2], str(data[product_name][index][3]) + ', ' + str(j[0] if j[0] is not None else ' '))
                                 except ValueError:
                                     print(product_name)
                                     print(data[product_name][index][0])
@@ -109,10 +109,10 @@ def load_files(paths):
                                 index = k
                                 break
                         if index == -1:
-                            data[product_name].append((r, str(j[2]), j[3].strip()))
+                            data[product_name].append((r, str(j[2]), j[3].strip(), j[0] if j[0] is not None else ' '))
                         else:
                             try:
-                                data[product_name][index] = (data[product_name][index][0], str(int(data[product_name][index][1]) + int(j[2])), data[product_name][index][2])
+                                data[product_name][index] = (data[product_name][index][0], str(int(data[product_name][index][1]) + int(j[2])), data[product_name][index][2], str(data[product_name][index][3]) + ', ' + str(j[0] if j[0] is not None else ' '))
                             except ValueError:
                                 print(product_name)
                                 print(data[product_name][index][0])

@@ -128,7 +128,7 @@ def sum_parts():
             counted = [i[1] for i in data[k] if i[0]==part[0]]
             if len(counted) > 1:
                 data[k] = [i for i in data[k] if i[0]!=part[0]]
-                data[k].extend([(part[0], str(sum(map(int, counted))), part[2])])
+                data[k].extend([(part[0], str(sum(map(int, counted))), part[2], part[3])])
     return True
 
 def expand(parts_to_expand, products_to_expand):
@@ -152,7 +152,7 @@ def expand(parts_to_expand, products_to_expand):
                 if index > -1:
                     del data[k][index]  # delete original part
                     #data[k].extend([(i[0] + "_m", i[1], i[2]) for i in subassembly_parts])
-                    data[k].extend([(i[0], i[1], i[2]) for i in subassembly_parts])
+                    data[k].extend([(i[0], i[1], i[2], i[3]) for i in subassembly_parts])
 
     else: #if extend only one part for all products #parts_to_expand == part number
         subassembly_revs = [i for i in data_subassemblies.keys() if parts_to_expand[0] in i]
@@ -174,7 +174,7 @@ def expand(parts_to_expand, products_to_expand):
                 if index > -1:
                     del data[k][index]  # delete original part
                     #data[k].extend([(i[0] + "_m", i[1], i[2]) for i in subassembly_parts])  # add subassembly parts to parts list
-                    data[k].extend([(i[0], i[1], i[2]) for i in subassembly_parts])  # add subassembly parts to parts list
+                    data[k].extend([(i[0], i[1], i[2], i[3]) for i in subassembly_parts])  # add subassembly parts to parts list
 
         else:#if extend only one part for one product
             subassembly_parts = data_subassemblies[subassembly_revs[0]]
@@ -186,7 +186,7 @@ def expand(parts_to_expand, products_to_expand):
                     break
             del data[products_to_expand][index] #delete original part
            #data[products_to_expand].extend([(i[0]+"_m", i[1], i[2]) for i in subassembly_parts]) #add subassembly parts to parts list
-            data[products_to_expand].extend([(i[0], i[1], i[2]) for i in subassembly_parts])  # add subassembly parts to parts list
+            data[products_to_expand].extend([(i[0], i[1], i[2], i[3]) for i in subassembly_parts])  # add subassembly parts to parts list
 
 
     sum_parts()
@@ -275,7 +275,7 @@ def mass_check():
                     for col, t in enumerate(header): #loop to write header
                         ws.cell(row=1, column=col+1).value = t
                     for part_PLM in data[j[0]]:
-                        if values_m['-DOC-'] and part_PLM[1] in ('', ' '):
+                        if values_m['-DOC-'] and part_PLM[1] in ('', ' ', 'None', None):
                             continue
                         if part_PLM[2] in ignore: #ignore parts with specified names
                             continue
@@ -338,6 +338,7 @@ def mass_check():
                             ws.cell(row=row_index, column=4).value = part_SAP[1]
                             ws.cell(row=row_index, column=5).value = "NOK"
                             ws.cell(row=row_index, column=5).fill = redFill
+                            ws.sheet_properties.tabColor = 'FFFF0000'
                             row_index += 1
 
             wb.save(filename = values_m['-SAVE-FILE-PATH-'])
@@ -444,8 +445,11 @@ def save_bom():
     ws.append(['Position', 'Part', 'Qty', 'Description', 'Parent'])
     for key in data:
         for row in data[key]:
-            ws.append(['', *row, key[:-4] if key[-4] == '_' else key[:-10]])
-
+            try:
+                ws.append([row[3], row[0], row[1], row[2], key[:-4] if key[-4] == '_' else key[:-10]])
+            except:
+                print(key)
+                print(row)
 
     wb.save(filename=save_file)
     sg.Popup("Successful")
