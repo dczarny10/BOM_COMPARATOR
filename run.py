@@ -139,7 +139,7 @@ def expand(parts_to_expand, products_to_expand):
             return None
         for o in data_subassemblies.keys():  # iterate through all subassembly products
             subassembly_parts = data_subassemblies[o]
-            if o.endswith("_SAP") or o.endswith("_PDF"):  # strip subassembly product number of _SAP or plant and revision level
+            if o.endswith("_SAP") or o.endswith("_PDF") or o.endswith("_MMC"):  # strip subassembly product number of _SAP or plant and revision level
                 o = o[:-4]
             else:
                 o = o[:-10]
