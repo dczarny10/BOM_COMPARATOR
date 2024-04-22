@@ -264,13 +264,14 @@ def mass_check():
                     ws1.cell(row=index_not_found, column=1).value = j[0] #write product number
                     index_not_found += 1
                 else:
-                    header = ('Part name', 'Part number', 'Quantity PDF', 'Quantity SAP', 'OK?/NOK?')
+                    header = ('Position', 'Part name', 'Part number', 'Quantity PLM', 'Quantity PDF', 'OK?/NOK?')
                     ws = wb.create_sheet(title=products_list[count]) #create new sheet with product number as title
-                    ws.column_dimensions['A'].width = 35
-                    ws.column_dimensions['B'].width = 15
-                    ws.column_dimensions['C'].width = 13
+                    ws.column_dimensions['A'].width = 16
+                    ws.column_dimensions['B'].width = 35
+                    ws.column_dimensions['C'].width = 15
                     ws.column_dimensions['D'].width = 13
-                    ws.column_dimensions['E'].width = 10
+                    ws.column_dimensions['E'].width = 13
+                    ws.column_dimensions['F'].width = 10
                     row_index = 2
                     for col, t in enumerate(header): #loop to write header
                         ws.cell(row=1, column=col+1).value = t
@@ -290,28 +291,31 @@ def mass_check():
                                     break
                         if index[0] == 1:
                             #compared.append((part_PLM[2], part_PLM[0], part_PLM[1], index[1], "OK"))
-                            ws.cell(row=row_index, column=1).value = part_PLM[2]
-                            ws.cell(row=row_index, column=2).value = part_PLM[0]
-                            ws.cell(row=row_index, column=3).value = part_PLM[1]
-                            ws.cell(row=row_index, column=4).value = index[1]
-                            ws.cell(row=row_index, column=5).value = "OK"
+                            ws.cell(row=row_index, column=1).value = part_PLM[3]
+                            ws.cell(row=row_index, column=2).value = part_PLM[2]
+                            ws.cell(row=row_index, column=3).value = part_PLM[0]
+                            ws.cell(row=row_index, column=4).value = part_PLM[1]
+                            ws.cell(row=row_index, column=5).value = index[1]
+                            ws.cell(row=row_index, column=6).value = "OK"
                         elif index[0] == 0:
                             #compared.append((part_PLM[2], part_PLM[0], part_PLM[1], index[1], "NOK"))
-                            ws.cell(row=row_index, column=1).value = part_PLM[2]
-                            ws.cell(row=row_index, column=2).value = part_PLM[0]
-                            ws.cell(row=row_index, column=3).value = part_PLM[1]
-                            ws.cell(row=row_index, column=4).value = index[1]
-                            ws.cell(row=row_index, column=5).value = "NOK"
-                            ws.cell(row=row_index, column=5).fill = yellowFill
+                            ws.cell(row=row_index, column=1).value = part_PLM[3]
+                            ws.cell(row=row_index, column=2).value = part_PLM[2]
+                            ws.cell(row=row_index, column=3).value = part_PLM[0]
+                            ws.cell(row=row_index, column=4).value = part_PLM[1]
+                            ws.cell(row=row_index, column=5).value = index[1]
+                            ws.cell(row=row_index, column=6).value = "NOK"
+                            ws.cell(row=row_index, column=6).fill = yellowFill
                             ws.sheet_properties.tabColor = 'FFFF00'
                         else:
                             #compared.append((part_PLM[2], part_PLM[0], part_PLM[1], "0", "NOK"))
-                            ws.cell(row=row_index, column=1).value = part_PLM[2]
-                            ws.cell(row=row_index, column=2).value = part_PLM[0]
-                            ws.cell(row=row_index, column=3).value = part_PLM[1]
-                            ws.cell(row=row_index, column=4).value = "0"
-                            ws.cell(row=row_index, column=5).value = "NOK"
-                            ws.cell(row=row_index, column=5).fill = redFill
+                            ws.cell(row=row_index, column=1).value = part_PLM[3]
+                            ws.cell(row=row_index, column=2).value = part_PLM[2]
+                            ws.cell(row=row_index, column=3).value = part_PLM[0]
+                            ws.cell(row=row_index, column=4).value = part_PLM[1]
+                            ws.cell(row=row_index, column=5).value = "0"
+                            ws.cell(row=row_index, column=6).value = "NOK"
+                            ws.cell(row=row_index, column=6).fill = redFill
                             ws.sheet_properties.tabColor = 'FFFF0000'
 
 
@@ -332,12 +336,13 @@ def mass_check():
                                 index = 1
                                 break
                         if index == -1:
-                            ws.cell(row=row_index, column=1).value = part_SAP[2]
-                            ws.cell(row=row_index, column=2).value = part_SAP[0]
-                            ws.cell(row=row_index, column=3).value = "0"
-                            ws.cell(row=row_index, column=4).value = part_SAP[1]
-                            ws.cell(row=row_index, column=5).value = "NOK"
-                            ws.cell(row=row_index, column=5).fill = redFill
+                            ws.cell(row=row_index, column=1).value = part_SAP[3]
+                            ws.cell(row=row_index, column=2).value = part_SAP[2]
+                            ws.cell(row=row_index, column=3).value = part_SAP[0]
+                            ws.cell(row=row_index, column=4).value = "0"
+                            ws.cell(row=row_index, column=5).value = part_SAP[1]
+                            ws.cell(row=row_index, column=6).value = "NOK"
+                            ws.cell(row=row_index, column=6).fill = redFill
                             ws.sheet_properties.tabColor = 'FFFF0000'
                             row_index += 1
 

@@ -60,7 +60,7 @@ def load_files(paths):
                                 index = k
                                 break
                         if index == -1:
-                            data[i].append((r[0][0], j[3 + count].split(".")[0], r[0][1].strip(), j[1].strip('0') if j[1] is not None else ' '))
+                            data[i].append((r[0][0], j[3 + count].split(".")[0], r[0][1].strip(), j[1] if j[1] is not None else ' '))
                         else:
                             try:
                                 data[i][index] = (data[i][index][0], str(int(data[i][index][1]) + int(j[3 + count].split(".")[0])), data[i][index][2], str(data[i][index][3]) + ', ' + str(j[1].strip('0') if j[1] is not None else ' '))
